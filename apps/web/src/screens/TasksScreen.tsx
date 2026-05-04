@@ -274,6 +274,8 @@ function TaskCard({
   onCheck: () => void;
 }) {
   const isCompleted = task.status === 'completed';
+  // Для покупок stars показываем эмодзи ⭐️ вместо линейной иконки.
+  const isStarTask = task.kind === 'buy_stars';
 
   return (
     <Glass
@@ -293,7 +295,9 @@ function TaskCard({
           width: 48,
           height: 48,
           borderRadius: 13,
-          background: 'rgba(155,123,255,0.14)',
+          background: isStarTask
+            ? 'rgba(242,198,107,0.14)'
+            : 'rgba(155,123,255,0.14)',
           border: `1px solid ${TOKENS.glassBorder}`,
           display: 'flex',
           alignItems: 'center',
@@ -302,7 +306,13 @@ function TaskCard({
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
         }}
       >
-        <Icon name={task.iconKind} size={22} color={TOKENS.violet} strokeWidth={1.7} />
+        {isStarTask ? (
+          <span style={{ fontSize: 22, lineHeight: 1 }} role="img" aria-label="star">
+            ⭐️
+          </span>
+        ) : (
+          <Icon name={task.iconKind} size={22} color={TOKENS.violet} strokeWidth={1.7} />
+        )}
       </div>
 
       {/* text block */}

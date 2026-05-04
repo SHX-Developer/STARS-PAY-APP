@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Order" ALTER COLUMN "status" SET DEFAULT 'created';
+ALTER TABLE "Order" ADD COLUMN "paidAt" TIMESTAMP(3);
+ALTER TABLE "Order" ADD COLUMN "deliveringAt" TIMESTAMP(3);
+ALTER TABLE "Order" ADD COLUMN "deliveredAt" TIMESTAMP(3);

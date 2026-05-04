@@ -65,7 +65,13 @@ model Order {
   recipientUsername String
   amount            Int      // кол-во Stars или месяцев Premium
   priceUsd          Decimal  @db.Decimal(10, 2)
-  status            String   @default("pending") // pending | paid | completed | failed | cancelled
+  // created → paid → delivering → delivered (либо failed / cancelled)
+  status            String   @default("created")
+
+  // таймстемпы переходов состояний — нужны для таймлайна на UI
+  paidAt            DateTime?
+  deliveringAt      DateTime?
+  deliveredAt       DateTime?
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

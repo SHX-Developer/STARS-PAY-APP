@@ -75,12 +75,10 @@ export async function referralRoutes(app: FastifyInstance) {
 }
 
 function buildReferralLink(code: string): string {
+  // Всегда используем `?start=<code>` — короче и работает в обоих режимах
+  // (открытие бота из чата и из inline-button). Бот должен на /start
+  // редиректить юзера в Mini App.
   const bot = config.TELEGRAM_BOT_USERNAME;
-  if (!bot) {
-    return `?start=${encodeURIComponent(code)}`;
-  }
-  const app = config.TELEGRAM_MINIAPP_NAME;
-  return app
-    ? `https://t.me/${bot}/${app}?startapp=${encodeURIComponent(code)}`
-    : `https://t.me/${bot}?start=${encodeURIComponent(code)}`;
+  const start = `?start=${encodeURIComponent(code)}`;
+  return bot ? `https://t.me/${bot}${start}` : start;
 }

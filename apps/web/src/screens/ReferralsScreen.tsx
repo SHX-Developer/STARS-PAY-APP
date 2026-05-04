@@ -238,11 +238,6 @@ function ReferralLinkCard({
     void handleCopy();
   };
 
-  const handleQr = () => {
-    hapticTap();
-    onToast('QR code coming soon');
-  };
-
   return (
     <Glass
       radius={22}
@@ -349,9 +344,8 @@ function ReferralLinkCard({
           </button>
         </div>
 
-        {/* QR / Share */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
-          <SubAction icon="qr" label="QR code" onClick={handleQr} />
+        {/* Share — full-width */}
+        <div style={{ marginTop: 10 }}>
           <SubAction icon="share" label="Share" onClick={handleShare} />
         </div>
       </div>
@@ -407,8 +401,6 @@ function StatsRow({
   thisMonth: number;
   earned: number;
 }) {
-  const earnedUsd = (earned * 0.014).toFixed(2);
-
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
       {/* Total invited */}
@@ -498,12 +490,13 @@ function StatsRow({
           <div
             style={{
               fontSize: 12,
-              color: TOKENS.textDim,
-              fontWeight: 500,
+              color: TOKENS.textMute,
+              fontWeight: 600,
+              letterSpacing: 0.4,
               marginTop: 10,
             }}
           >
-            ≈ ${earnedUsd} USD
+            stars
           </div>
         </div>
       </Glass>

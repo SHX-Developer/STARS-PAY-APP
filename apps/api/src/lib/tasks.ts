@@ -34,7 +34,7 @@ export interface DefaultTask {
 }
 
 // Заказы со статусом "выполнено" — что считаем валидной покупкой
-const FULFILLED_STATUSES = ['paid', 'completed'] as const;
+const FULFILLED_STATUSES = ['paid', 'delivering', 'delivered', 'completed'] as const;
 
 export const DEFAULT_TASKS: DefaultTask[] = [
   // -------- Социалки --------

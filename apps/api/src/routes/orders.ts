@@ -40,6 +40,7 @@ export async function ordersRoutes(app: FastifyInstance) {
       return { error: 'invalid_amount', allowed: PREMIUM_MONTHS };
     }
 
+    const now = new Date();
     const order = await prisma.order.create({
       data: {
         userId,
@@ -47,7 +48,10 @@ export async function ordersRoutes(app: FastifyInstance) {
         recipientUsername,
         amount,
         priceUsd,
-        status: 'paid', // MVP: считаем оплаченным сразу
+        // MVP: без реальной оплаты — заказ сразу paid (с timestamp).
+        // Дальше admin переводит в delivering / delivered.
+        status: 'paid',
+        paidAt: now,
       },
     });
 
@@ -82,14 +86,22 @@ function serializeOrder(o: {
   priceUsd: { toString(): string };
   status: string;
   createdAt: Date;
+  paidAt: Date | null;
+  deliveringAt: Date | null;
+  deliveredAt: Date | null;
 }) {
   return {
     id: o.id,
+    // короткий читаемый "номер" заказа: последние 4 знака cuid в верхнем регистре.
+    number: `O${o.id.slice(-4).toUpperCase()}`,
     kind: o.kind,
     recipientUsername: o.recipientUsername,
     amount: o.amount,
     priceUsd: o.priceUsd.toString(),
     status: o.status,
     createdAt: o.createdAt.toISOString(),
+    paidAt: o.paidAt?.toISOString() ?? null,
+    deliveringAt: o.deliveringAt?.toISOString() ?? null,
+    deliveredAt: o.deliveredAt?.toISOString() ?? null,
   };
 }

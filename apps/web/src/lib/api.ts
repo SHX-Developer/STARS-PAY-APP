@@ -5,6 +5,7 @@ import type {
   TasksResponse,
   TaskCheckResponse,
   CreateOrderResponse,
+  OrdersResponse,
 } from '../types';
 
 // Базовый URL — пустая строка означает same-origin (так в проде через Traefik).
@@ -88,5 +89,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+  orders() {
+    return request<OrdersResponse>('/api/orders');
   },
 };

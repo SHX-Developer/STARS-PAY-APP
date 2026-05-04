@@ -9,7 +9,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { ReferralsScreen } from './screens/ReferralsScreen';
 import { TasksScreen } from './screens/TasksScreen';
-import { Placeholder } from './screens/Placeholder';
+import { OrdersScreen } from './screens/OrdersScreen';
 
 const BRAND = 'StarsPay';
 
@@ -93,13 +93,7 @@ export default function App() {
     profile: <ProfileScreen user={user} lang={lang} onLang={setLang} />,
     referrals: <ReferralsScreen onToast={showToast} />,
     tasks: <TasksScreen onToast={showToast} />,
-    orders: (
-      <Placeholder
-        icon="orders"
-        title="Orders"
-        subtitle="Your purchase history will show up here once you check out."
-      />
-    ),
+    orders: <OrdersScreen />,
   };
 
   return (

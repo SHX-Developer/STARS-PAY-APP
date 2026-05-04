@@ -47,19 +47,35 @@ export interface ReferralsResponse {
 }
 
 // Order
+export type OrderStatus =
+  | 'created'
+  | 'paid'
+  | 'delivering'
+  | 'delivered'
+  | 'failed'
+  | 'cancelled';
+
 export interface OrderItem {
   id: string;
-  kind: string;
+  number: string; // короткий читаемый — например "O7KMP"
+  kind: string;   // 'stars' | 'premium'
   recipientUsername: string;
   amount: number;
   priceUsd: string;
-  status: string;
+  status: OrderStatus;
   createdAt: string;
+  paidAt: string | null;
+  deliveringAt: string | null;
+  deliveredAt: string | null;
 }
 
 export interface CreateOrderResponse {
   order: OrderItem;
   referralBonus: { creditedTo: string; amount: number } | null;
+}
+
+export interface OrdersResponse {
+  items: OrderItem[];
 }
 
 // =====================================================

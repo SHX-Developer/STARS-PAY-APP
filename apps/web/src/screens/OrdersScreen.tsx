@@ -1,0 +1,712 @@
+import { useEffect, useState, useCallback, type ReactNode } from 'react';
+import { TOKENS } from '../lib/tokens';
+import { Glass } from '../components/Glass';
+import { Icon, StarIcon } from '../components/Icon';
+import { api } from '../lib/api';
+import type { OrderItem, OrderStatus } from '../types';
+
+export function OrdersScreen() {
+  const [orders, setOrders] = useState<OrderItem[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.orders();
+      setOrders(res.items);
+      // По умолчанию раскрываем первый (самый свежий) — как на дизайне
+      if (res.items.length > 0 && expandedId === null) {
+        setExpandedId(res.items[0]!.id);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <div
+      style={{
+        padding: '0 18px 110px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 18,
+      }}
+    >
+      <Header />
+
+      {loading && !orders ? (
+        <SkeletonBlock />
+      ) : error && !orders ? (
+        <Glass radius={18} padding={16}>
+          <div style={{ color: '#FF8B8B', fontSize: 14, fontWeight: 600 }}>
+            Failed to load orders
+          </div>
+          <div style={{ color: TOKENS.textMute, fontSize: 12, marginTop: 6 }}>{error}</div>
+          <button onClick={() => void load()} style={retryBtnStyle}>
+            Retry
+          </button>
+        </Glass>
+      ) : orders && orders.length === 0 ? (
+        <EmptyState />
+      ) : orders ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {orders.map((o) => (
+            <OrderCard
+              key={o.id}
+              order={o}
+              expanded={expandedId === o.id}
+              onToggle={() => setExpandedId((prev) => (prev === o.id ? null : o.id))}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// =====================================================
+// Header
+// =====================================================
+function Header() {
+  return (
+    <div style={{ marginTop: 4 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: 1.6,
+          color: TOKENS.textMute,
+          textTransform: 'uppercase',
+        }}
+      >
+        History
+      </div>
+      <div
+        style={{
+          fontSize: 32,
+          fontWeight: 800,
+          color: TOKENS.text,
+          letterSpacing: -0.8,
+          lineHeight: 1.05,
+          marginTop: 4,
+        }}
+      >
+        My orders
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// Карточка заказа (collapsible)
+// =====================================================
+function OrderCard({
+  order,
+  expanded,
+  onToggle,
+}: {
+  order: OrderItem;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const isStars = order.kind === 'stars';
+  const title = isStars ? `${order.amount} stars` : `Premium · ${order.amount}m`;
+  const recipient = `@${order.recipientUsername}`;
+
+  return (
+    <Glass radius={18} padding={0} style={{ overflow: 'hidden' }}>
+      {/* верхняя строка — кликабельная для toggle */}
+      <button
+        onClick={onToggle}
+        style={{
+          width: '100%',
+          padding: '14px 14px',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          fontFamily: 'inherit',
+          color: 'inherit',
+          textAlign: 'left',
+        }}
+      >
+        <KindIcon kind={order.kind} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              color: TOKENS.text,
+              letterSpacing: -0.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {title}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: TOKENS.textMute,
+              fontWeight: 500,
+              marginTop: 2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {recipient} · {formatOrderDate(order.createdAt)}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: TOKENS.text,
+              letterSpacing: -0.3,
+            }}
+          >
+            ${order.priceUsd}
+          </div>
+          <StatusPill status={order.status} />
+        </div>
+
+        <div
+          style={{
+            marginLeft: 4,
+            transform: expanded ? 'rotate(-90deg)' : 'rotate(90deg)',
+            transition: 'transform 220ms ease',
+            color: TOKENS.textMute,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <Icon name="chevron-right" size={16} color={TOKENS.textMute} strokeWidth={2} />
+        </div>
+      </button>
+
+      {/* раскрываемая часть */}
+      {expanded && (
+        <div style={{ padding: '4px 14px 16px' }}>
+          <div
+            style={{
+              height: 1,
+              background: 'rgba(255,255,255,0.06)',
+              margin: '4px 0 14px',
+            }}
+          />
+          <Timeline order={order} />
+          <DetailsBox order={order} />
+        </div>
+      )}
+    </Glass>
+  );
+}
+
+// =====================================================
+// KindIcon — большая плитка слева (звезда / гем)
+// =====================================================
+function KindIcon({ kind }: { kind: string }) {
+  const isStars = kind === 'stars';
+  return (
+    <div
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: 13,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: isStars
+          ? 'linear-gradient(135deg, rgba(242,198,107,0.25), rgba(242,198,107,0.08))'
+          : 'linear-gradient(135deg, rgba(155,123,255,0.25), rgba(155,123,255,0.08))',
+        border: `1px solid ${isStars ? 'rgba(242,198,107,0.32)' : 'rgba(155,123,255,0.32)'}`,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+      }}
+    >
+      <span style={{ fontSize: 22, lineHeight: 1 }} role="img" aria-label={isStars ? 'stars' : 'premium'}>
+        {isStars ? '⭐️' : '💎'}
+      </span>
+    </div>
+  );
+}
+
+// =====================================================
+// Статус-пилюля
+// =====================================================
+function StatusPill({ status }: { status: OrderStatus }) {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.created;
+  return (
+    <div
+      style={{
+        padding: '3px 10px',
+        borderRadius: 999,
+        background: cfg.bg,
+        border: `1px solid ${cfg.border}`,
+        color: cfg.color,
+        fontSize: 10,
+        fontWeight: 800,
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {cfg.label}
+    </div>
+  );
+}
+
+const STATUS_CONFIG: Record<
+  OrderStatus,
+  { label: string; bg: string; border: string; color: string }
+> = {
+  created: {
+    label: 'Created',
+    bg: 'rgba(91,157,238,0.15)',
+    border: 'rgba(91,157,238,0.35)',
+    color: '#8DBBF1',
+  },
+  paid: {
+    label: 'Paid',
+    bg: 'rgba(75,200,150,0.15)',
+    border: 'rgba(75,200,150,0.4)',
+    color: '#7BD89B',
+  },
+  delivering: {
+    label: 'Delivering',
+    bg: 'rgba(242,198,107,0.14)',
+    border: 'rgba(242,198,107,0.4)',
+    color: TOKENS.gold,
+  },
+  delivered: {
+    label: 'Delivered',
+    bg: 'rgba(155,123,255,0.18)',
+    border: 'rgba(155,123,255,0.42)',
+    color: '#C9B4FF',
+  },
+  failed: {
+    label: 'Failed',
+    bg: 'rgba(255,123,123,0.16)',
+    border: 'rgba(255,123,123,0.4)',
+    color: '#FF8B8B',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    bg: 'rgba(255,255,255,0.06)',
+    border: 'rgba(255,255,255,0.15)',
+    color: TOKENS.textDim,
+  },
+};
+
+// =====================================================
+// Timeline (Created → Paid → Delivering → Delivered)
+// =====================================================
+function Timeline({ order }: { order: OrderItem }) {
+  const stages: { key: string; title: string; at: string | null }[] = [
+    { key: 'created', title: 'Created', at: order.createdAt },
+    { key: 'paid', title: 'Paid', at: order.paidAt },
+    { key: 'delivering', title: 'Delivering', at: order.deliveringAt },
+    { key: 'delivered', title: 'Delivered', at: order.deliveredAt },
+  ];
+  // Текущий шаг = последний с timestamp.
+  let lastFilled = -1;
+  for (let i = stages.length - 1; i >= 0; i--) {
+    if (stages[i]!.at) {
+      lastFilled = i;
+      break;
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {stages.map((s, i) => {
+        let state: 'done' | 'current' | 'pending';
+        if (i < lastFilled) state = 'done';
+        else if (i === lastFilled) state = 'current';
+        else state = 'pending';
+        return (
+          <TimelineRow
+            key={s.key}
+            title={s.title}
+            time={
+              s.at
+                ? i === 0
+                  ? formatOrderDate(s.at)
+                  : formatRelativeFromCreated(s.at, order.createdAt)
+                : '—'
+            }
+            state={state}
+            isLast={i === stages.length - 1}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function TimelineRow({
+  title,
+  time,
+  state,
+  isLast,
+}: {
+  title: string;
+  time: string;
+  state: 'done' | 'current' | 'pending';
+  isLast: boolean;
+}) {
+  const dim = state === 'pending';
+  return (
+    <div style={{ display: 'flex', gap: 14, alignItems: 'stretch' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          width: 24,
+          flexShrink: 0,
+        }}
+      >
+        <TimelineDot state={state} />
+        {!isLast && (
+          <div
+            style={{
+              flex: 1,
+              width: 2,
+              minHeight: 14,
+              background:
+                state === 'pending'
+                  ? 'rgba(255,255,255,0.08)'
+                  : 'rgba(155,123,255,0.45)',
+              borderRadius: 1,
+              marginTop: 2,
+              marginBottom: 2,
+            }}
+          />
+        )}
+      </div>
+      <div style={{ paddingBottom: isLast ? 0 : 12, flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14.5,
+            fontWeight: 700,
+            color: dim ? TOKENS.textDim : TOKENS.text,
+            letterSpacing: -0.1,
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: TOKENS.textMute,
+            fontWeight: 500,
+            marginTop: 2,
+          }}
+        >
+          {time}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineDot({ state }: { state: 'done' | 'current' | 'pending' }) {
+  if (state === 'done') {
+    return (
+      <div
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #9B7BFF, #7B5CE6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          boxShadow: '0 4px 10px rgba(123,92,230,0.35)',
+        }}
+      >
+        <Icon name="check" size={12} color="#fff" strokeWidth={2.6} />
+      </div>
+    );
+  }
+  if (state === 'current') {
+    return (
+      <div
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #9B7BFF, #7B5CE6)',
+          flexShrink: 0,
+          boxShadow:
+            '0 0 0 4px rgba(155,123,255,0.18), 0 4px 14px rgba(123,92,230,0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: '#fff',
+          }}
+        />
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        width: 22,
+        height: 22,
+        borderRadius: '50%',
+        border: '1.5px solid rgba(255,255,255,0.16)',
+        background: 'rgba(255,255,255,0.02)',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+// =====================================================
+// Details box — RECIPIENT / ORDER ID / AMOUNT / TOTAL
+// =====================================================
+function DetailsBox({ order }: { order: OrderItem }) {
+  const isStars = order.kind === 'stars';
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        padding: 16,
+        borderRadius: 14,
+        background: 'rgba(0,0,0,0.22)',
+        border: `1px solid ${TOKENS.glassBorder}`,
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '16px 12px',
+      }}
+    >
+      <DetailField label="Recipient" value={`@${order.recipientUsername}`} mono />
+      <DetailField label="Order ID" value={`#${order.number}`} mono />
+      <DetailField
+        label="Amount"
+        valueNode={
+          isStars ? (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: TOKENS.text }}>
+                {order.amount}
+              </span>
+              <StarIcon size={14} />
+            </div>
+          ) : (
+            <span style={{ fontSize: 16, fontWeight: 800, color: TOKENS.text }}>
+              {order.amount} months
+            </span>
+          )
+        }
+      />
+      <DetailField label="Total" value={`$${order.priceUsd}`} />
+    </div>
+  );
+}
+
+function DetailField({
+  label,
+  value,
+  valueNode,
+  mono,
+}: {
+  label: string;
+  value?: string;
+  valueNode?: ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: 1.2,
+          color: TOKENS.textMute,
+          textTransform: 'uppercase',
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      {valueNode ?? (
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: TOKENS.text,
+            letterSpacing: -0.1,
+            fontFamily: mono
+              ? 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace'
+              : 'inherit',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {value}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =====================================================
+// Empty state
+// =====================================================
+function EmptyState() {
+  return (
+    <Glass radius={18} padding="32px 16px" style={{ textAlign: 'center' }}>
+      <div
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: 18,
+          background: 'rgba(155,123,255,0.16)',
+          border: `1px solid ${TOKENS.glassBorderStrong}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 14px',
+        }}
+      >
+        <Icon name="orders" size={28} color={TOKENS.violet} strokeWidth={1.6} />
+      </div>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: TOKENS.text,
+          marginBottom: 6,
+        }}
+      >
+        No orders yet
+      </div>
+      <div style={{ fontSize: 13, color: TOKENS.textDim, fontWeight: 500, lineHeight: 1.5 }}>
+        Place your first order on the Home tab — it will appear here.
+      </div>
+    </Glass>
+  );
+}
+
+// =====================================================
+// Date helpers
+// =====================================================
+function formatOrderDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (d >= today) return `Today, ${time}`;
+  if (d >= yesterday) return `Yesterday, ${time}`;
+  const month = d.toLocaleString('en', { month: 'short' });
+  return `${month} ${d.getDate()}, ${time}`;
+}
+
+function formatRelativeFromCreated(iso: string, createdIso: string): string {
+  const ts = Date.parse(iso);
+  const baseTs = Date.parse(createdIso);
+  if (Number.isNaN(ts) || Number.isNaN(baseTs)) return '—';
+  const dayPrefix = sameDayPrefix(iso);
+  const diffSec = Math.floor((ts - baseTs) / 1000);
+  if (diffSec < 60) return `${dayPrefix}, +${diffSec}s`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${dayPrefix}, +${diffMin}m`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${dayPrefix}, +${diffHour}h`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${dayPrefix}, +${diffDay}d`;
+}
+
+function sameDayPrefix(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  if (d >= today) return 'Today';
+  if (d >= yesterday) return 'Yesterday';
+  return d.toLocaleString('en', { month: 'short' }) + ' ' + d.getDate();
+}
+
+function pad(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+// =====================================================
+// Skeleton + retry
+// =====================================================
+function SkeletonBlock() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Skel h={84} />
+      <Skel h={68} />
+      <Skel h={68} />
+      <Skel h={68} />
+    </div>
+  );
+}
+
+function Skel({ h }: { h: number }) {
+  return (
+    <div
+      style={{
+        height: h,
+        borderRadius: 16,
+        background:
+          'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))',
+        backgroundSize: '200% 100%',
+        animation: 'pulse 1.6s ease infinite',
+      }}
+    />
+  );
+}
+
+const retryBtnStyle = {
+  marginTop: 12,
+  height: 36,
+  padding: '0 16px',
+  borderRadius: 10,
+  border: '1px solid rgba(155,123,255,0.4)',
+  background: 'rgba(155,123,255,0.18)',
+  color: '#fff',
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+} as const;

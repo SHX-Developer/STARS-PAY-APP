@@ -177,35 +177,34 @@ export function Icon({
   }
 }
 
+/**
+ * StarIcon — теперь просто эмодзи ⭐️.
+ * Сохраняем сигнатуру (size/color/glow) ради обратной совместимости — но color
+ * и glow игнорируются, т.к. цвет эмодзи задаёт сам шрифт системы.
+ */
 export function StarIcon({
   size = 18,
-  color = TOKENS.gold,
-  glow = true,
 }: {
   size?: number;
   color?: string;
   glow?: boolean;
 }) {
-  const id = `sg-${color.replace('#', '')}`;
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      style={{ filter: glow ? `drop-shadow(0 0 6px ${color}aa)` : 'none' }}
+    <span
+      style={{
+        fontSize: size,
+        lineHeight: 1,
+        display: 'inline-block',
+        // эмодзи в Safari/iOS могут вертикально съезжать — приподнимаем чуть-чуть
+        verticalAlign: 'middle',
+        // сглаживаем pixel-edges на маленьких размерах
+        WebkitFontSmoothing: 'antialiased',
+      }}
+      aria-label="star"
+      role="img"
     >
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FFE9B0" />
-          <stop offset="50%" stopColor={color} />
-          <stop offset="100%" stopColor="#B47A1A" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M12 2 L14 9 L21 11.5 L14.5 13.5 L12 22 L9.5 13.5 L3 11.5 L10 9 Z"
-        fill={`url(#${id})`}
-      />
-    </svg>
+      ⭐️
+    </span>
   );
 }
 

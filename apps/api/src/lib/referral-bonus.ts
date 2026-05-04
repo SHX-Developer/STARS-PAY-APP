@@ -9,7 +9,7 @@ import type { Prisma } from '@prisma/client';
 
 export const REFERRAL_FIRST_ORDER_BONUS = 10;
 
-const FULFILLED_STATUSES = ['paid', 'completed'] as const;
+const FULFILLED_STATUSES = ['paid', 'delivering', 'delivered', 'completed'] as const;
 
 interface CreditResult {
   credited: boolean;
