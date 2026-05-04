@@ -122,7 +122,7 @@ npm run dev:web    # → http://localhost:5173
 
 | Переменная | Что вписать |
 |---|---|
-| `POSTGRES_PASSWORD` | Сильный пароль (`openssl rand -hex 24`) |
+| `DATABASE_URL` | Internal Connection URL из Dokploy-Postgres + `?schema=public` |
 | `TELEGRAM_BOT_TOKEN` | Токен от [@BotFather](https://t.me/BotFather) |
 | `JWT_SECRET` | Случайная строка ≥ 32 символов (`openssl rand -base64 48`) |
 | `CORS_ORIGINS` | `https://ваш-домен.com` (или `*`, если фронт+бэк на одном домене) |
@@ -135,35 +135,40 @@ npm run dev:web    # → http://localhost:5173
 
 2. **Запушьте репозиторий** (GitHub / GitLab / Gitea).
 
-3. **В Dokploy создайте проект:**
+3. **В Dokploy создайте отдельный Postgres:**
+   - **Project → Create → Database → PostgreSQL**
+   - Имя БД и пользователя — `starspay` (или любое), пароль сгенерируется.
+   - Скопируйте *Internal Connection URL* со страницы созданной БД.
+
+4. **В том же проекте создайте Compose-сервис:**
    - **Project → Create → Service → Compose**
    - Укажите git-репозиторий и ветку.
    - Поле "Compose Path" оставьте `docker-compose.yml` (по умолчанию).
 
-4. **Заполните переменные окружения** в разделе *Environment* (по списку из `.env.example`):
+5. **Заполните переменные окружения** Compose-сервиса в разделе *Environment*:
    ```
-   POSTGRES_PASSWORD=…
+   DATABASE_URL=<Internal Connection URL>?schema=public
    TELEGRAM_BOT_TOKEN=…
    JWT_SECRET=…
    CORS_ORIGINS=https://ваш-домен.com
    VITE_API_BASE=
    ```
 
-5. **Назначьте домен сервису `web`:**
+6. **Назначьте домен сервису `web`:**
    - Вкладка *Domains* у сервиса `web` → Add Domain.
    - Укажите ваш субдомен (например `app.example.com`), порт `80`, включите *HTTPS* (Dokploy сам выпишет Let's Encrypt через Traefik).
 
-6. **Задеплойте:** кнопка *Deploy*. Dokploy:
+7. **Задеплойте:** кнопка *Deploy*. Dokploy:
    - склонирует репо,
-   - соберёт три образа (`db`, `api`, `web`),
+   - соберёт два образа (`api`, `web`),
    - применит миграции (`prisma migrate deploy` идёт в `CMD` контейнера `api`),
    - поднимет контейнеры с healthcheck'ами,
    - подключит Traefik к сервису `web`.
 
-7. **Скажите BotFather про URL Mini App:**
+8. **Скажите BotFather про URL Mini App:**
    - `/myapps` → выберите ваше → *Edit Web App URL* → `https://ваш-домен.com`.
 
-8. Готово. Запустите бота в Telegram, нажмите кнопку Mini App — должен появиться экран с вашим именем и аватаркой.
+9. Готово. Запустите бота в Telegram, нажмите кнопку Mini App — должен появиться экран с вашим именем и аватаркой.
 
 ### Что Dokploy делает за вас
 

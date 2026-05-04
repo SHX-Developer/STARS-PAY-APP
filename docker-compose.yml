@@ -1,30 +1,16 @@
 # =====================================================
 # docker-compose.yml — StarsPay
 # Готов для деплоя в Dokploy (тип проекта: Docker Compose).
-# Dokploy сам подхватит сервис `web` как entrypoint и обернёт его в Traefik
-# (домен и SSL настраиваются в UI Dokploy на конкретный сервис).
+#
+# БД здесь НЕ описана — используется отдельный сервис PostgreSQL,
+# созданный в Dokploy (Project → Create → Database → PostgreSQL).
+# Передайте его "Internal Connection URL" в переменную DATABASE_URL.
+#
+# Dokploy подхватит сервис `web` как entrypoint и обернёт его в Traefik
+# (домен и SSL настраиваются в UI Dokploy).
 # =====================================================
 
 services:
-  # -----------------------------
-  # PostgreSQL
-  # -----------------------------
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-starspay}
-      POSTGRES_USER: ${POSTGRES_USER:-starspay}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-starspay} -d ${POSTGRES_DB:-starspay}']
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    # порт намеренно НЕ публикуется наружу — БД доступна только внутри docker-сети
-
   # -----------------------------
   # API (Fastify + Prisma)
   # -----------------------------
@@ -33,14 +19,12 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 4000
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-starspay}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-starspay}?schema=public
+      # Internal Connection URL из Dokploy-Postgres + ?schema=public
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required (возьмите Internal Connection URL у Dokploy-Postgres и добавьте ?schema=public)}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       TELEGRAM_AUTH_TTL: ${TELEGRAM_AUTH_TTL:-86400}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
@@ -51,6 +35,11 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - api-avatars:/app/data/avatars
+    networks:
+      # default — чтобы web мог ходить на http://api:4000
+      - default
+      # dokploy-network — чтобы api видел отдельный Postgres-сервис Dokploy по его internal host
+      - dokploy-network
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/health']
       interval: 30s
@@ -82,10 +71,11 @@ services:
       retries: 5
     # В Dokploy: задайте домен для сервиса `web` через UI — Traefik автоматически
     # выпишет SSL и направит трафик. Никаких labels вручную писать не нужно.
-    # Для локального запуска можно раскомментировать:
-    # ports:
-    #   - "8080:80"
 
 volumes:
-  db-data:
   api-avatars:
+
+networks:
+  # внешняя shared-сеть Dokploy (создаётся самим Dokploy)
+  dokploy-network:
+    external: true
