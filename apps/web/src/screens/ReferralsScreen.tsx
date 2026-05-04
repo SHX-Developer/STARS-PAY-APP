@@ -152,12 +152,10 @@ function ReferralLinkCard({
     const text = `Join me on StarsPay`;
     const tg = window.Telegram?.WebApp;
     // Telegram нативный share — открывает выбор чата
-    if (tg) {
+    if (tg?.openTelegramLink) {
       const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
-      // openTelegramLink есть у WebApp, но fall-back через window.open надёжнее
       try {
-        // @ts-expect-error — openTelegramLink не в нашем минимальном типе
-        tg.openTelegramLink?.(shareUrl);
+        tg.openTelegramLink(shareUrl);
         return;
       } catch {
         /* noop */
