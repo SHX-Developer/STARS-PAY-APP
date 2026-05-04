@@ -43,6 +43,7 @@ model User {
   // Связи
   orders          Order[]
   taskCompletions TaskCompletion[]
+  transactions    Transaction[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -96,6 +97,28 @@ model Task {
 
   completions TaskCompletion[]
   createdAt   DateTime @default(now())
+}
+
+// =====================================================
+// История движения stars-баланса (поступления и выводы)
+// =====================================================
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 'task' | 'referral' | 'withdrawal' | 'admin'
+  type      String
+  // знаковая сумма stars: положительная — пополнение, отрицательная — расход
+  amount    Int
+  // короткое описание для UI ("Daily check-in", "Withdrawal", ...)
+  note      String?
+  // id связанной сущности (taskId / referralUserId / withdrawalId)
+  refId     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model TaskCompletion {

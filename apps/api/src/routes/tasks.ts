@@ -118,6 +118,16 @@ export async function tasksRoutes(app: FastifyInstance) {
         data: { sparkleBalance: { increment: task.reward } },
         select: { sparkleBalance: true },
       });
+      // Запись в историю — для отображения на профиле
+      await tx.transaction.create({
+        data: {
+          userId,
+          type: 'task',
+          amount: task.reward,
+          note: task.title,
+          refId: task.id,
+        },
+      });
       return {
         awarded: task.reward,
         alreadyCompleted: false as const,

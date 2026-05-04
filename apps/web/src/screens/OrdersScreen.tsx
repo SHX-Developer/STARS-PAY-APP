@@ -3,6 +3,7 @@ import { TOKENS } from '../lib/tokens';
 import { Glass } from '../components/Glass';
 import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
+import { useT } from '../lib/i18n-context';
 import type { OrderItem, OrderStatus } from '../types';
 
 export function OrdersScreen() {
@@ -78,6 +79,7 @@ export function OrdersScreen() {
 // Header
 // =====================================================
 function Header() {
+  const tr = useT();
   return (
     <div style={{ marginTop: 4 }}>
       <div
@@ -89,7 +91,7 @@ function Header() {
           textTransform: 'uppercase',
         }}
       >
-        History
+        {tr('orders_history').toUpperCase()}
       </div>
       <div
         style={{
@@ -101,7 +103,7 @@ function Header() {
           marginTop: 4,
         }}
       >
-        My orders
+        {tr('orders_title')}
       </div>
     </div>
   );
@@ -260,7 +262,9 @@ function KindIcon({ kind }: { kind: string }) {
 // Статус-пилюля
 // =====================================================
 function StatusPill({ status }: { status: OrderStatus }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.created;
+  const tr = useT();
+  const cfg = STATUS_STYLE[status] ?? STATUS_STYLE.created;
+  const labelKey = STATUS_LABEL_KEY[status] ?? STATUS_LABEL_KEY.created;
   return (
     <div
       style={{
@@ -276,62 +280,74 @@ function StatusPill({ status }: { status: OrderStatus }) {
         whiteSpace: 'nowrap',
       }}
     >
-      {cfg.label}
+      {tr(labelKey)}
     </div>
   );
 }
 
-const STATUS_CONFIG: Record<
+const STATUS_STYLE: Record<
   OrderStatus,
-  { label: string; bg: string; border: string; color: string }
+  { bg: string; border: string; color: string }
 > = {
   created: {
-    label: 'Created',
     bg: 'rgba(91,157,238,0.15)',
     border: 'rgba(91,157,238,0.35)',
     color: '#8DBBF1',
   },
   paid: {
-    label: 'Paid',
     bg: 'rgba(75,200,150,0.15)',
     border: 'rgba(75,200,150,0.4)',
     color: '#7BD89B',
   },
   delivering: {
-    label: 'Delivering',
     bg: 'rgba(242,198,107,0.14)',
     border: 'rgba(242,198,107,0.4)',
     color: TOKENS.gold,
   },
   delivered: {
-    label: 'Delivered',
     bg: 'rgba(155,123,255,0.18)',
     border: 'rgba(155,123,255,0.42)',
     color: '#C9B4FF',
   },
   failed: {
-    label: 'Failed',
     bg: 'rgba(255,123,123,0.16)',
     border: 'rgba(255,123,123,0.4)',
     color: '#FF8B8B',
   },
   cancelled: {
-    label: 'Cancelled',
     bg: 'rgba(255,255,255,0.06)',
     border: 'rgba(255,255,255,0.15)',
     color: TOKENS.textDim,
   },
 };
 
+const STATUS_LABEL_KEY: Record<
+  OrderStatus,
+  | 'orders_status_created'
+  | 'orders_status_paid'
+  | 'orders_status_delivering'
+  | 'orders_status_delivered'
+  | 'orders_status_failed'
+  | 'orders_status_cancelled'
+> = {
+  created: 'orders_status_created',
+  paid: 'orders_status_paid',
+  delivering: 'orders_status_delivering',
+  delivered: 'orders_status_delivered',
+  failed: 'orders_status_failed',
+  cancelled: 'orders_status_cancelled',
+};
+
 // =====================================================
 // Timeline (Created → Paid → Delivering → Delivered)
 // =====================================================
 function Timeline({ order }: { order: OrderItem }) {
+  const tr = useT();
   const stages: { key: string; title: string; at: string | null }[] = [
-    { key: 'created', title: 'Created', at: order.createdAt },
-    { key: 'paid', title: 'Paid', at: order.paidAt },
-    { key: 'delivering', title: 'Delivering', at: order.deliveringAt },
-    { key: 'delivered', title: 'Delivered', at: order.deliveredAt },
+    { key: 'created', title: tr('orders_step_created'), at: order.createdAt },
+    { key: 'paid', title: tr('orders_step_paid'), at: order.paidAt },
+    { key: 'delivering', title: tr('orders_step_delivering'), at: order.deliveringAt },
+    { key: 'delivered', title: tr('orders_step_delivered'), at: order.deliveredAt },
   ];
   // Текущий шаг = последний с timestamp.
   let lastFilled = -1;
@@ -501,6 +517,7 @@ function TimelineDot({ state }: { state: 'done' | 'current' | 'pending' }) {
 // Details box — RECIPIENT / ORDER ID / AMOUNT / TOTAL
 // =====================================================
 function DetailsBox({ order }: { order: OrderItem }) {
+  const tr = useT();
   const isStars = order.kind === 'stars';
   return (
     <div
@@ -515,10 +532,10 @@ function DetailsBox({ order }: { order: OrderItem }) {
         gap: '16px 12px',
       }}
     >
-      <DetailField label="Recipient" value={`@${order.recipientUsername}`} mono />
-      <DetailField label="Order ID" value={`#${order.number}`} mono />
+      <DetailField label={tr('orders_recipient')} value={`@${order.recipientUsername}`} mono />
+      <DetailField label={tr('orders_id')} value={`#${order.number}`} mono />
       <DetailField
-        label="Amount"
+        label={tr('orders_amount')}
         valueNode={
           isStars ? (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -529,12 +546,12 @@ function DetailsBox({ order }: { order: OrderItem }) {
             </div>
           ) : (
             <span style={{ fontSize: 16, fontWeight: 800, color: TOKENS.text }}>
-              {order.amount} months
+              {order.amount} {tr('orders_months')}
             </span>
           )
         }
       />
-      <DetailField label="Total" value={`$${order.priceUsd}`} />
+      <DetailField label={tr('orders_total')} value={`$${order.priceUsd}`} />
     </div>
   );
 }
@@ -590,6 +607,7 @@ function DetailField({
 // Empty state
 // =====================================================
 function EmptyState() {
+  const tr = useT();
   return (
     <Glass radius={18} padding="32px 16px" style={{ textAlign: 'center' }}>
       <div
@@ -615,10 +633,10 @@ function EmptyState() {
           marginBottom: 6,
         }}
       >
-        No orders yet
+        {tr('orders_empty_title')}
       </div>
       <div style={{ fontSize: 13, color: TOKENS.textDim, fontWeight: 500, lineHeight: 1.5 }}>
-        Place your first order on the Home tab — it will appear here.
+        {tr('orders_empty_sub')}
       </div>
     </Glass>
   );

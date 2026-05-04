@@ -4,6 +4,7 @@ import { Glass } from '../components/Glass';
 import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
 import { hapticTap } from '../lib/telegram';
+import { useT } from '../lib/i18n-context';
 import type { ReferralsResponse, ReferralItem } from '../types';
 
 interface ReferralsProps {
@@ -72,10 +73,11 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
 // Инфо-блок «How it works»
 // =====================================================
 function HowItWorksCard({ bonus }: { bonus: number }) {
+  const tr = useT();
   const steps = [
-    { n: '1', text: 'Share your referral link with a friend' },
-    { n: '2', text: 'They join StarsPay through your link' },
-    { n: '3', text: `On their first order — you get +${bonus} stars` },
+    { n: '1', text: tr('referrals_step_1') },
+    { n: '2', text: tr('referrals_step_2') },
+    { n: '3', text: tr('referrals_step_3', { bonus }) },
   ];
   return (
     <Glass
@@ -96,7 +98,7 @@ function HowItWorksCard({ bonus }: { bonus: number }) {
           marginBottom: 12,
         }}
       >
-        How it works
+        {tr('referrals_how_it_works')}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {steps.map((s) => (
@@ -141,6 +143,11 @@ function HowItWorksCard({ bonus }: { bonus: number }) {
 // Header — REFERRALS / Earn from friends / +N stars per first order
 // =====================================================
 function Header({ bonus }: { bonus: number }) {
+  const tr = useT();
+  // переведённый шаблон с {bonus} — выделяем "+N stars" жирным золотым через split
+  const sub = tr('referrals_subtitle_html', { bonus });
+  const accent = `+${bonus} stars`;
+  const idx = sub.indexOf(accent);
   return (
     <div style={{ marginTop: 4 }}>
       <div
@@ -152,7 +159,7 @@ function Header({ bonus }: { bonus: number }) {
           textTransform: 'uppercase',
         }}
       >
-        Referrals
+        REFERRALS
       </div>
       <div
         style={{
@@ -164,7 +171,7 @@ function Header({ bonus }: { bonus: number }) {
           marginTop: 4,
         }}
       >
-        Earn from friends
+        {tr('referrals_title')}
       </div>
       <div
         style={{
@@ -174,9 +181,15 @@ function Header({ bonus }: { bonus: number }) {
           marginTop: 10,
         }}
       >
-        Get{' '}
-        <span style={{ color: TOKENS.gold, fontWeight: 700 }}>+{bonus} stars</span>{' '}
-        for every referral's first order. Credited automatically.
+        {idx >= 0 ? (
+          <>
+            {sub.slice(0, idx)}
+            <span style={{ color: TOKENS.gold, fontWeight: 700 }}>{accent}</span>
+            {sub.slice(idx + accent.length)}
+          </>
+        ) : (
+          sub
+        )}
       </div>
     </div>
   );
@@ -192,6 +205,7 @@ function ReferralLinkCard({
   link: string;
   onToast: (msg: string) => void;
 }) {
+  const tr = useT();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -213,7 +227,7 @@ function ReferralLinkCard({
       document.body.removeChild(ta);
     }
     setCopied(true);
-    onToast('Link copied');
+    onToast(tr('common_link_copied'));
     setTimeout(() => setCopied(false), 1600);
   };
 
@@ -277,7 +291,7 @@ function ReferralLinkCard({
             marginBottom: 10,
           }}
         >
-          Your referral link
+          {tr('referrals_your_link')}
         </div>
 
         {/* link input + copy button */}
@@ -346,7 +360,7 @@ function ReferralLinkCard({
 
         {/* Share — full-width */}
         <div style={{ marginTop: 10 }}>
-          <SubAction icon="share" label="Share" onClick={handleShare} />
+          <SubAction icon="share" label={tr('referrals_share')} onClick={handleShare} />
         </div>
       </div>
     </Glass>
@@ -401,11 +415,12 @@ function StatsRow({
   thisMonth: number;
   earned: number;
 }) {
+  const tr = useT();
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
       {/* Total invited */}
       <Glass radius={18} padding={16}>
-        <StatLabel>Total invited</StatLabel>
+        <StatLabel>{tr('referrals_total_invited')}</StatLabel>
         <div
           style={{
             fontSize: 36,
@@ -435,7 +450,7 @@ function StatsRow({
             color={thisMonth > 0 ? '#7BD89B' : TOKENS.textMute}
             strokeWidth={2.4}
           />
-          <span>{thisMonth} this month</span>
+          <span>{tr('referrals_this_month', { n: thisMonth })}</span>
         </div>
       </Glass>
 
@@ -465,7 +480,7 @@ function StatsRow({
           }}
         />
         <div style={{ position: 'relative' }}>
-          <StatLabel>Earned</StatLabel>
+          <StatLabel>{tr('referrals_earned')}</StatLabel>
           <div
             style={{
               display: 'flex',
@@ -524,6 +539,7 @@ function StatLabel({ children }: { children: ReactNode }) {
 // Список приглашённых — YOUR INVITES / N friends / cards
 // =====================================================
 function InvitedList({ items, count }: { items: ReferralItem[]; count: number }) {
+  const tr = useT();
   return (
     <div>
       <div style={{ padding: '0 4px', marginBottom: 12 }}>
@@ -536,7 +552,7 @@ function InvitedList({ items, count }: { items: ReferralItem[]; count: number })
             textTransform: 'uppercase',
           }}
         >
-          Your invites
+          {tr('referrals_invites')}
         </div>
         <div
           style={{
@@ -547,7 +563,7 @@ function InvitedList({ items, count }: { items: ReferralItem[]; count: number })
             marginTop: 4,
           }}
         >
-          {count} {count === 1 ? 'friend' : 'friends'}
+          {tr(count === 1 ? 'referrals_friends_one' : 'referrals_friends_many', { n: count })}
         </div>
       </div>
 
@@ -562,7 +578,7 @@ function InvitedList({ items, count }: { items: ReferralItem[]; count: number })
               lineHeight: 1.5,
             }}
           >
-            No friends yet. Share your link above — invitees will show up here.
+            {tr('referrals_empty')}
           </div>
         </Glass>
       ) : (

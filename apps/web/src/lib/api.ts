@@ -6,6 +6,8 @@ import type {
   TaskCheckResponse,
   CreateOrderResponse,
   OrdersResponse,
+  TransactionsResponse,
+  WithdrawResponse,
 } from '../types';
 
 // Базовый URL — пустая строка означает same-origin (так в проде через Traefik).
@@ -92,5 +94,14 @@ export const api = {
   },
   orders() {
     return request<OrdersResponse>('/api/orders');
+  },
+  transactions() {
+    return request<TransactionsResponse>('/api/transactions');
+  },
+  withdraw(amount: number) {
+    return request<WithdrawResponse>('/api/withdraw', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
   },
 };

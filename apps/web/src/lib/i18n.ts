@@ -1,0 +1,340 @@
+// =====================================================
+// i18n: словарь UI на 3 языка (en / ru / uz).
+// При добавлении нового ключа — добавьте во ВСЕ три словаря,
+// иначе TypeScript подсветит ошибку.
+// =====================================================
+
+export type Lang = 'en' | 'ru' | 'uz';
+
+export const LANGS: { code: Lang; flag: string; label: string }[] = [
+  { code: 'uz', flag: 'UZ', label: "O'zbekcha" },
+  { code: 'ru', flag: 'RU', label: 'Русский' },
+  { code: 'en', flag: 'EN', label: 'English' },
+];
+
+export const DICT = {
+  en: {
+    // Common
+    common_retry: 'Retry',
+    common_loading: 'Loading…',
+    common_done: 'Done',
+    common_cancel: 'Cancel',
+    common_confirm: 'Confirm',
+    common_close: 'Close',
+    common_copied: 'Copied',
+    common_link_copied: 'Link copied',
+    common_code_copied: 'Code copied',
+
+    // Telegram-launcher errors
+    open_in_tg_title: 'Open inside Telegram',
+    open_in_tg_body: 'This Mini App needs to be launched from Telegram.',
+    auth_failed_title: 'Authorization failed',
+    auth_failed_body: 'Could not validate your Telegram session. Try reopening the app.',
+
+    // Profile
+    profile_star_balance: 'Star balance',
+    profile_history: 'History',
+    profile_withdraw: 'Withdraw',
+    profile_ref_code: 'Your ref code',
+    profile_invited: 'Invited',
+    profile_language: 'Language',
+    profile_links: 'Links & support',
+    profile_link_channel: 'Our channel',
+    profile_link_instagram: 'Instagram',
+    profile_link_website: 'Website',
+    profile_link_support: 'Tech support',
+    profile_link_support_sub: 'avg reply 2 min',
+    profile_recent_activity: 'Recent activity',
+    profile_no_activity: 'No transactions yet.',
+    profile_member_since: 'since',
+
+    // Withdraw modal
+    withdraw_title: 'Withdraw stars',
+    withdraw_to: 'To your account',
+    withdraw_amount: 'Amount',
+    withdraw_min_hint: 'Minimum {min} stars',
+    withdraw_balance: 'Available',
+    withdraw_button: 'Confirm withdrawal',
+    withdraw_quick_all: 'All',
+    withdraw_success: 'Withdrawal sent',
+    withdraw_error_min: 'Minimum withdrawal is {min} stars',
+    withdraw_error_balance: 'Not enough stars on balance',
+    withdraw_helper:
+      'Stars will be sent to your own Telegram account.',
+
+    // Transactions / activity
+    tx_task: 'Task reward',
+    tx_referral: 'Referral bonus',
+    tx_withdrawal: 'Withdrawal',
+    tx_admin: 'Adjustment',
+
+    // Home (greeting / tabs)
+    home_welcome: 'Welcome back',
+    home_tab_stars: 'Stars',
+    home_tab_premium: 'Premium',
+
+    // Referrals
+    referrals_title: 'Earn from friends',
+    referrals_subtitle_html: 'Get +{bonus} stars for every referral first order. Credited automatically.',
+    referrals_your_link: 'Your referral link',
+    referrals_share: 'Share',
+    referrals_total_invited: 'Total invited',
+    referrals_earned: 'Earned',
+    referrals_this_month: '{n} this month',
+    referrals_invites: 'Your invites',
+    referrals_friends_one: '{n} friend',
+    referrals_friends_many: '{n} friends',
+    referrals_empty: 'No friends yet. Share your link above — invitees will show up here.',
+    referrals_how_it_works: 'How it works',
+    referrals_step_1: 'Share your referral link with a friend',
+    referrals_step_2: 'They join StarsPay through your link',
+    referrals_step_3: 'On their first order — you get +{bonus} stars',
+
+    // Tasks
+    tasks_title: 'Earn stars',
+    tasks_subtitle: "Complete simple actions and we'll credit stars to your balance instantly.",
+    tasks_progress: 'Progress',
+    tasks_progress_done: '{done} of {total} done',
+    tasks_check: 'Check',
+    tasks_already_completed: 'Already completed',
+    tasks_not_yet: 'Not yet',
+
+    // Orders
+    orders_title: 'My orders',
+    orders_history: 'History',
+    orders_empty_title: 'No orders yet',
+    orders_empty_sub: 'Place your first order on the Home tab — it will appear here.',
+    orders_step_created: 'Created',
+    orders_step_paid: 'Paid',
+    orders_step_delivering: 'Delivering',
+    orders_step_delivered: 'Delivered',
+    orders_recipient: 'Recipient',
+    orders_id: 'Order ID',
+    orders_amount: 'Amount',
+    orders_total: 'Total',
+    orders_months: 'months',
+    orders_status_created: 'Created',
+    orders_status_paid: 'Paid',
+    orders_status_delivering: 'Delivering',
+    orders_status_delivered: 'Delivered',
+    orders_status_failed: 'Failed',
+    orders_status_cancelled: 'Cancelled',
+  },
+
+  ru: {
+    common_retry: 'Повторить',
+    common_loading: 'Загрузка…',
+    common_done: 'Готово',
+    common_cancel: 'Отмена',
+    common_confirm: 'Подтвердить',
+    common_close: 'Закрыть',
+    common_copied: 'Скопировано',
+    common_link_copied: 'Ссылка скопирована',
+    common_code_copied: 'Код скопирован',
+
+    open_in_tg_title: 'Откройте в Telegram',
+    open_in_tg_body: 'Этот Mini App нужно открывать из Telegram.',
+    auth_failed_title: 'Ошибка авторизации',
+    auth_failed_body: 'Не удалось подтвердить сессию Telegram. Попробуйте переоткрыть.',
+
+    profile_star_balance: 'Баланс stars',
+    profile_history: 'История',
+    profile_withdraw: 'Вывести',
+    profile_ref_code: 'Ваш реф-код',
+    profile_invited: 'Приглашено',
+    profile_language: 'Язык',
+    profile_links: 'Ссылки и поддержка',
+    profile_link_channel: 'Наш канал',
+    profile_link_instagram: 'Instagram',
+    profile_link_website: 'Сайт',
+    profile_link_support: 'Поддержка',
+    profile_link_support_sub: 'отвечаем за 2 мин',
+    profile_recent_activity: 'Последние операции',
+    profile_no_activity: 'Транзакций пока нет.',
+    profile_member_since: 'с',
+
+    withdraw_title: 'Вывод stars',
+    withdraw_to: 'На ваш аккаунт',
+    withdraw_amount: 'Сумма',
+    withdraw_min_hint: 'Минимум {min} stars',
+    withdraw_balance: 'Доступно',
+    withdraw_button: 'Подтвердить вывод',
+    withdraw_quick_all: 'Все',
+    withdraw_success: 'Вывод отправлен',
+    withdraw_error_min: 'Минимальный вывод — {min} stars',
+    withdraw_error_balance: 'Недостаточно stars на балансе',
+    withdraw_helper: 'Stars будут отправлены на ваш Telegram-аккаунт.',
+
+    tx_task: 'Награда за задание',
+    tx_referral: 'Реферальный бонус',
+    tx_withdrawal: 'Вывод',
+    tx_admin: 'Корректировка',
+
+    home_welcome: 'С возвращением',
+    home_tab_stars: 'Stars',
+    home_tab_premium: 'Premium',
+
+    referrals_title: 'Зарабатывайте с друзьями',
+    referrals_subtitle_html: 'Получайте +{bonus} stars за первый заказ каждого реферала. Зачисляется автоматически.',
+    referrals_your_link: 'Ваша реф-ссылка',
+    referrals_share: 'Поделиться',
+    referrals_total_invited: 'Всего приглашено',
+    referrals_earned: 'Заработано',
+    referrals_this_month: '+{n} за месяц',
+    referrals_invites: 'Приглашённые',
+    referrals_friends_one: '{n} друг',
+    referrals_friends_many: '{n} друзей',
+    referrals_empty: 'Пока никого. Поделитесь ссылкой — приглашённые появятся здесь.',
+    referrals_how_it_works: 'Как это работает',
+    referrals_step_1: 'Поделитесь своей реф-ссылкой с другом',
+    referrals_step_2: 'Он открывает StarsPay по вашей ссылке',
+    referrals_step_3: 'За его первый заказ вы получаете +{bonus} stars',
+
+    tasks_title: 'Зарабатывайте stars',
+    tasks_subtitle: 'Выполняйте простые действия — stars начисляются на баланс мгновенно.',
+    tasks_progress: 'Прогресс',
+    tasks_progress_done: '{done} из {total} выполнено',
+    tasks_check: 'Проверить',
+    tasks_already_completed: 'Уже выполнено',
+    tasks_not_yet: 'Ещё не готово',
+
+    orders_title: 'Мои заказы',
+    orders_history: 'История',
+    orders_empty_title: 'Заказов пока нет',
+    orders_empty_sub: 'Сделайте первый заказ на главной — он появится здесь.',
+    orders_step_created: 'Создан',
+    orders_step_paid: 'Оплачен',
+    orders_step_delivering: 'Отправляется',
+    orders_step_delivered: 'Доставлен',
+    orders_recipient: 'Получатель',
+    orders_id: 'Номер заказа',
+    orders_amount: 'Количество',
+    orders_total: 'Итого',
+    orders_months: 'мес',
+    orders_status_created: 'Создан',
+    orders_status_paid: 'Оплачен',
+    orders_status_delivering: 'Отправляется',
+    orders_status_delivered: 'Доставлен',
+    orders_status_failed: 'Ошибка',
+    orders_status_cancelled: 'Отменён',
+  },
+
+  uz: {
+    common_retry: 'Qayta urinish',
+    common_loading: 'Yuklanmoqda…',
+    common_done: 'Tayyor',
+    common_cancel: 'Bekor qilish',
+    common_confirm: 'Tasdiqlash',
+    common_close: 'Yopish',
+    common_copied: 'Nusxalandi',
+    common_link_copied: 'Havola nusxalandi',
+    common_code_copied: 'Kod nusxalandi',
+
+    open_in_tg_title: 'Telegram orqali oching',
+    open_in_tg_body: 'Bu Mini App Telegram orqali ochilishi kerak.',
+    auth_failed_title: "Avtorizatsiya xatosi",
+    auth_failed_body: 'Telegram sessiyasini tasdiqlab bo‘lmadi. Ilovani qayta oching.',
+
+    profile_star_balance: 'Stars balansi',
+    profile_history: 'Tarix',
+    profile_withdraw: 'Yechib olish',
+    profile_ref_code: 'Sizning ref-kodingiz',
+    profile_invited: 'Taklif qilingan',
+    profile_language: 'Til',
+    profile_links: "Havolalar va yordam",
+    profile_link_channel: 'Bizning kanal',
+    profile_link_instagram: 'Instagram',
+    profile_link_website: 'Veb-sayt',
+    profile_link_support: 'Texnik yordam',
+    profile_link_support_sub: "o‘rta javob 2 daqiqa",
+    profile_recent_activity: "So‘nggi operatsiyalar",
+    profile_no_activity: "Hali tranzaksiyalar yo‘q.",
+    profile_member_since: '— ',
+
+    withdraw_title: "Stars yechib olish",
+    withdraw_to: 'O‘z akkauntingizga',
+    withdraw_amount: 'Miqdori',
+    withdraw_min_hint: 'Minimum {min} stars',
+    withdraw_balance: 'Mavjud',
+    withdraw_button: "Yechib olishni tasdiqlash",
+    withdraw_quick_all: 'Hammasi',
+    withdraw_success: "Yechib olish yuborildi",
+    withdraw_error_min: 'Minimal yechib olish — {min} stars',
+    withdraw_error_balance: 'Balansda yetarli stars yo‘q',
+    withdraw_helper: 'Stars sizning Telegram akkauntingizga yuboriladi.',
+
+    tx_task: "Vazifa mukofoti",
+    tx_referral: 'Referal bonus',
+    tx_withdrawal: 'Yechib olish',
+    tx_admin: 'Tuzatish',
+
+    home_welcome: 'Qaytib kelganingizdan xursandmiz',
+    home_tab_stars: 'Stars',
+    home_tab_premium: 'Premium',
+
+    referrals_title: 'Do‘stlar bilan ishlang',
+    referrals_subtitle_html: 'Har bir referalning birinchi buyurtmasi uchun +{bonus} stars oling. Avtomatik hisoblanadi.',
+    referrals_your_link: 'Sizning ref-havolangiz',
+    referrals_share: 'Ulashish',
+    referrals_total_invited: 'Jami taklif qilingan',
+    referrals_earned: 'Topilgan',
+    referrals_this_month: 'Bu oy +{n}',
+    referrals_invites: 'Taklif qilinganlar',
+    referrals_friends_one: '{n} do‘st',
+    referrals_friends_many: '{n} do‘st',
+    referrals_empty: 'Hali hech kim yo‘q. Havolani ulashing — bu yerda paydo bo‘ladilar.',
+    referrals_how_it_works: 'Bu qanday ishlaydi',
+    referrals_step_1: 'Ref-havolangizni do‘stingizga yuboring',
+    referrals_step_2: 'U havolangiz orqali StarsPay-ga qo‘shiladi',
+    referrals_step_3: 'Birinchi buyurtmasi uchun siz +{bonus} stars olasiz',
+
+    tasks_title: 'Stars toping',
+    tasks_subtitle: 'Oddiy harakatlarni bajaring — stars darhol balansga qo‘shiladi.',
+    tasks_progress: 'Jarayon',
+    tasks_progress_done: '{done} / {total} bajarildi',
+    tasks_check: 'Tekshirish',
+    tasks_already_completed: 'Allaqachon bajarilgan',
+    tasks_not_yet: 'Hali tayyor emas',
+
+    orders_title: 'Mening buyurtmalarim',
+    orders_history: 'Tarix',
+    orders_empty_title: 'Hali buyurtmalar yo‘q',
+    orders_empty_sub: 'Bosh sahifada birinchi buyurtmangizni bering — u shu yerda paydo bo‘ladi.',
+    orders_step_created: 'Yaratildi',
+    orders_step_paid: 'To‘langan',
+    orders_step_delivering: 'Yetkazilmoqda',
+    orders_step_delivered: 'Yetkazildi',
+    orders_recipient: 'Qabul qiluvchi',
+    orders_id: 'Buyurtma raqami',
+    orders_amount: 'Miqdori',
+    orders_total: 'Jami',
+    orders_months: 'oy',
+    orders_status_created: 'Yaratildi',
+    orders_status_paid: "To‘langan",
+    orders_status_delivering: 'Yetkazilmoqda',
+    orders_status_delivered: 'Yetkazildi',
+    orders_status_failed: 'Xato',
+    orders_status_cancelled: 'Bekor qilindi',
+  },
+} as const;
+
+// Ключ перевода = пересечение ключей всех языков (чтобы TS требовал
+// одинаковый набор ключей в каждом dict).
+export type TKey = keyof (typeof DICT)['en'];
+
+/**
+ * Подставляет {placeholder} значениями из второго аргумента.
+ * Например: format("Min {min} stars", { min: 50 }) → "Min 50 stars"
+ */
+export function format(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (_m, k: string) =>
+    vars[k] !== undefined ? String(vars[k]) : `{${k}}`,
+  );
+}
+
+export function translate(lang: Lang, key: TKey, vars?: Record<string, string | number>): string {
+  const dict = DICT[lang] ?? DICT.en;
+  const template = dict[key] ?? DICT.en[key] ?? key;
+  return format(template, vars);
+}

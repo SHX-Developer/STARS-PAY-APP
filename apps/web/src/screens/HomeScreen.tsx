@@ -3,6 +3,7 @@ import { TOKENS } from '../lib/tokens';
 import { Glass } from '../components/Glass';
 import { Icon, StarIcon, GemIcon } from '../components/Icon';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { useT } from '../lib/i18n-context';
 import type { AppUser } from '../types';
 
 interface HomeProps {
@@ -17,6 +18,7 @@ interface HomeProps {
 }
 
 export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
+  const tr = useT();
   const [tab, setTab] = useState<'stars' | 'premium'>('stars');
   const [username, setUsername] = useState(user.username ?? '');
   const [amount, setAmount] = useState(100);
@@ -90,7 +92,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
               letterSpacing: 0.6,
             }}
           >
-            WELCOME BACK
+            {tr('home_welcome').toUpperCase()}
           </div>
           <div
             style={{
@@ -212,8 +214,8 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
         />
         {(
           [
-            { id: 'stars', label: 'Stars' },
-            { id: 'premium', label: 'Premium' },
+            { id: 'stars', label: tr('home_tab_stars') },
+            { id: 'premium', label: tr('home_tab_premium') },
           ] as const
         ).map((o) => (
           <button

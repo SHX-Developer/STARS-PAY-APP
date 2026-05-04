@@ -79,6 +79,31 @@ export interface OrdersResponse {
 }
 
 // =====================================================
+// Wallet (transactions + withdraw)
+// =====================================================
+export type TxType = 'task' | 'referral' | 'withdrawal' | 'admin';
+
+export interface TransactionItem {
+  id: string;
+  type: TxType;
+  amount: number; // знаковая
+  note: string | null;
+  createdAt: string;
+}
+
+export interface TransactionsResponse {
+  items: TransactionItem[];
+}
+
+export interface WithdrawResponse {
+  ok: boolean;
+  starBalance?: number;
+  transaction?: TransactionItem;
+  error?: string;
+  min?: number;
+}
+
+// =====================================================
 // Tasks
 // =====================================================
 export interface TaskItem {

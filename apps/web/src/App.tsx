@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { TOKENS } from './lib/tokens';
 import { useAuth } from './hooks/useAuth';
 import { api } from './lib/api';
+import { useT } from './lib/i18n-context';
 import { AppBackground } from './components/AppBackground';
 import { BottomNav, type Screen } from './components/BottomNav';
 import { Toast } from './components/Toast';
@@ -14,10 +15,10 @@ import { OrdersScreen } from './screens/OrdersScreen';
 const BRAND = 'StarsPay';
 
 export default function App() {
+  const t = useT();
   const { state, refresh } = useAuth();
   const [screen, setScreen] = useState<Screen>('home');
   const [toast, setToast] = useState<string | null>(null);
-  const [lang, setLang] = useState<string>('en');
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -53,7 +54,7 @@ export default function App() {
   if (state.status === 'loading') {
     return (
       <FullscreenWrap>
-        <Loader label="Connecting…" />
+        <Loader label={t('common_loading')} />
       </FullscreenWrap>
     );
   }
@@ -61,10 +62,7 @@ export default function App() {
   if (state.status === 'no-telegram') {
     return (
       <FullscreenWrap>
-        <Centered
-          title="Open inside Telegram"
-          body="This Mini App needs to be launched from Telegram. Open the bot and tap the Web App button."
-        />
+        <Centered title={t('open_in_tg_title')} body={t('open_in_tg_body')} />
       </FullscreenWrap>
     );
   }
@@ -73,8 +71,8 @@ export default function App() {
     return (
       <FullscreenWrap>
         <Centered
-          title="Authorization failed"
-          body={state.message || 'Could not validate your Telegram session. Try reopening the app.'}
+          title={t('auth_failed_title')}
+          body={state.message || t('auth_failed_body')}
         />
       </FullscreenWrap>
     );
@@ -90,7 +88,7 @@ export default function App() {
         onCheckout={(o) => void handleCheckout(o)}
       />
     ),
-    profile: <ProfileScreen user={user} lang={lang} onLang={setLang} />,
+    profile: <ProfileScreen user={user} onToast={showToast} onBalanceUpdate={() => void refresh()} />,
     referrals: <ReferralsScreen onToast={showToast} />,
     tasks: <TasksScreen onToast={showToast} />,
     orders: <OrdersScreen />,

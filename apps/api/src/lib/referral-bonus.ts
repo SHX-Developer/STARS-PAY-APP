@@ -60,6 +60,17 @@ export async function maybeCreditReferralBonus(
       data: { sparkleBalance: { increment: REFERRAL_FIRST_ORDER_BONUS } },
     });
 
+    // Запись в историю — у пригласителя в профиле появится строчка
+    await client.transaction.create({
+      data: {
+        userId: user.referredById,
+        type: 'referral',
+        amount: REFERRAL_FIRST_ORDER_BONUS,
+        note: 'Referral first order',
+        refId: userId,
+      },
+    });
+
     return {
       credited: true,
       inviterId: user.referredById,

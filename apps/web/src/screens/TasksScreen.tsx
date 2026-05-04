@@ -4,6 +4,7 @@ import { Glass } from '../components/Glass';
 import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
 import { hapticTap } from '../lib/telegram';
+import { useT } from '../lib/i18n-context';
 import type { TaskItem, TasksResponse } from '../types';
 
 interface TasksProps {
@@ -138,6 +139,7 @@ export function TasksScreen({ onToast }: TasksProps) {
 // Header — TASKS / Earn stars / subtitle
 // =====================================================
 function Header() {
+  const tr = useT();
   return (
     <div style={{ marginTop: 4 }}>
       <div
@@ -149,7 +151,7 @@ function Header() {
           textTransform: 'uppercase',
         }}
       >
-        Tasks
+        TASKS
       </div>
       <div
         style={{
@@ -161,7 +163,7 @@ function Header() {
           marginTop: 4,
         }}
       >
-        Earn stars
+        {tr('tasks_title')}
       </div>
       <div
         style={{
@@ -171,7 +173,7 @@ function Header() {
           marginTop: 10,
         }}
       >
-        Complete simple actions and we'll credit stars to your balance instantly.
+        {tr('tasks_subtitle')}
       </div>
     </div>
   );
@@ -181,6 +183,7 @@ function Header() {
 // Progress card — PROGRESS / X of Y done / +N / progress bar
 // =====================================================
 function ProgressCard({ summary }: { summary: TasksResponse['summary'] }) {
+  const tr = useT();
   const pct =
     summary.totalCount > 0 ? Math.min(100, (summary.completedCount / summary.totalCount) * 100) : 0;
 
@@ -198,7 +201,7 @@ function ProgressCard({ summary }: { summary: TasksResponse['summary'] }) {
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ minWidth: 0 }}>
-          <Label>Progress</Label>
+          <Label>{tr('tasks_progress')}</Label>
           <div
             style={{
               fontSize: 22,
@@ -208,11 +211,10 @@ function ProgressCard({ summary }: { summary: TasksResponse['summary'] }) {
               marginTop: 6,
             }}
           >
-            <span>{summary.completedCount}</span>
-            <span style={{ color: TOKENS.textDim, fontWeight: 600 }}>
-              {' '}
-              of {summary.totalCount} done
-            </span>
+            {tr('tasks_progress_done', {
+              done: summary.completedCount,
+              total: summary.totalCount,
+            })}
           </div>
         </div>
 
@@ -273,6 +275,7 @@ function TaskCard({
   busy: boolean;
   onCheck: () => void;
 }) {
+  const tr = useT();
   const isCompleted = task.status === 'completed';
   // Для покупок stars показываем эмодзи ⭐️ вместо линейной иконки.
   const isStarTask = task.kind === 'buy_stars';
@@ -404,7 +407,7 @@ function TaskCard({
               transition: 'transform 160ms ease, filter 160ms ease',
             }}
           >
-            Check
+            {tr('tasks_check')}
           </button>
         )}
       </div>
