@@ -22,8 +22,9 @@ RUN --mount=type=cache,target=/root/.npm \
 FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
 RUN apk add --no-cache openssl
+# npm workspaces полностью хойстят зависимости в корневой /app/node_modules,
+# поэтому отдельной apps/api/node_modules не существует — Node резолвит вверх.
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY package.json package-lock.json* ./
 COPY apps/api ./apps/api
 WORKDIR /app/apps/api
@@ -54,9 +55,10 @@ ENV HOST=0.0.0.0
 RUN apk add --no-cache openssl tini wget && \
     addgroup -S app && adduser -S app -G app
 
-# prod node_modules (с prisma engine) и сгенерённые типы
+# prod node_modules (с prisma engine) и сгенерённые типы.
+# Хойстинг workspaces → всё лежит в корневом /app/node_modules,
+# api-процесс резолвит зависимости через walk-up.
 COPY --from=prod-deps --chown=app:app /app/node_modules /app/node_modules
-COPY --from=prod-deps --chown=app:app /app/apps/api/node_modules ./node_modules
 COPY --from=prod-deps --chown=app:app /app/apps/api/prisma ./prisma
 # наш собранный код
 COPY --from=builder --chown=app:app /app/apps/api/dist ./dist
