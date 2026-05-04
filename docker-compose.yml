@@ -27,6 +27,10 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required (возьмите Internal Connection URL у Dokploy-Postgres и добавьте ?schema=public)}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
       TELEGRAM_AUTH_TTL: ${TELEGRAM_AUTH_TTL:-86400}
+      # Юзернейм бота без @ (например `starspay_bot`) — нужен для реф-ссылок
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      # Короткое имя Mini App из BotFather `/newapp` (например `app`)
+      TELEGRAM_MINIAPP_NAME: ${TELEGRAM_MINIAPP_NAME:-}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}

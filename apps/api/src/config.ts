@@ -16,6 +16,13 @@ const EnvSchema = z.object({
   // Срок жизни initData в секундах (защита от replay)
   TELEGRAM_AUTH_TTL: z.coerce.number().int().positive().default(86400),
 
+  // Юзернейм бота (без @) — нужен для построения реф-ссылок вида
+  // https://t.me/<bot>/<app>?startapp=<code>
+  TELEGRAM_BOT_USERNAME: z.string().min(1).optional(),
+  // Короткое имя Mini App, заданное в BotFather (`/newapp`).
+  // Если не задано — реф-ссылка падает на формат `?start=<code>`.
+  TELEGRAM_MINIAPP_NAME: z.string().min(1).optional(),
+
   // JWT — для подписи сессионного токена, выдаваемого фронту
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 chars'),
   JWT_EXPIRES_IN: z.string().default('7d'),

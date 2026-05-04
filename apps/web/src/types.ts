@@ -25,6 +25,23 @@ export interface MeResponse {
   stats: { referrals: number };
 }
 
+export interface ReferralItem {
+  id: string;
+  username: string | null;
+  firstName: string;
+  lastName: string | null;
+  avatarUrl: string | null;
+  ordersCount: number;
+  createdAt: string;
+}
+
+export interface ReferralsResponse {
+  code: string;
+  link: string;
+  count: number;
+  items: ReferralItem[];
+}
+
 // Telegram WebApp SDK (минимальный shape)
 declare global {
   interface Window {

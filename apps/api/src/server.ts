@@ -9,6 +9,7 @@ import { config, isDev } from './config.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
+import { referralRoutes } from './routes/referrals.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -88,6 +89,7 @@ export async function buildServer(): Promise<FastifyInstance> {
     async (api) => {
       await api.register(authRoutes); // /auth/telegram
       await api.register(meRoutes); // /me
+      await api.register(referralRoutes); // /referrals
     },
     { prefix: '/api' },
   );

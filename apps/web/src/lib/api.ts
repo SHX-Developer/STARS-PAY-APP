@@ -1,4 +1,4 @@
-import type { AuthResponse, MeResponse } from '../types';
+import type { AuthResponse, MeResponse, ReferralsResponse } from '../types';
 
 // Базовый URL — пустая строка означает same-origin (так в проде через Traefik).
 // В dev Vite-прокси перенаправляет /api → :4000.
@@ -59,5 +59,8 @@ export const api = {
   },
   me() {
     return request<MeResponse>('/api/me');
+  },
+  referrals() {
+    return request<ReferralsResponse>('/api/referrals');
   },
 };

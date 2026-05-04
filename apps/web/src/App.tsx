@@ -6,6 +6,7 @@ import { BottomNav, type Screen } from './components/BottomNav';
 import { Toast } from './components/Toast';
 import { HomeScreen } from './screens/HomeScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { ReferralsScreen } from './screens/ReferralsScreen';
 import { Placeholder } from './screens/Placeholder';
 
 const BRAND = 'StarsPay';
@@ -62,13 +63,7 @@ export default function App() {
       />
     ),
     profile: <ProfileScreen user={user} lang={lang} onLang={setLang} />,
-    referrals: (
-      <Placeholder
-        icon="referrals"
-        title="Referrals"
-        subtitle={`Share your code: ${user.referralCode} — invite friends and earn sparkles.`}
-      />
-    ),
+    referrals: <ReferralsScreen onToast={showToast} />,
     tasks: (
       <Placeholder icon="tasks" title="Tasks" subtitle="Daily quests will appear here." />
     ),
