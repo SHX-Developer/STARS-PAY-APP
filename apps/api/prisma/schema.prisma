@@ -1,0 +1,103 @@
+// Prisma schema — StarsPay
+// Минимальная модель: User. Дополнительные таблицы (orders, tasks, referrals)
+// уже описаны опционально, чтобы можно было быстро расширяться.
+
+generator client {
+  provider      = "prisma-client-js"
+  // alpine + debian musl — нужно для Docker-сборки
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// Пользователь (создаётся при первом входе через TG)
+// =====================================================
+model User {
+  id              String   @id @default(cuid())
+  // Telegram ID — основной идентификатор для авторизации
+  telegramId      BigInt   @unique
+  username        String?
+  firstName       String
+  lastName        String?
+  languageCode    String?
+  isPremium       Boolean  @default(false)
+  // photo_url из initData (CDN telegram, может протухать) и локально кэшированная аватарка
+  photoUrl        String?
+  avatarLocalPath String?
+
+  // App-state
+  sparkleBalance  Int      @default(0)
+  tier            String   @default("bronze") // bronze | silver | gold | platinum
+  referralCode    String   @unique
+  referredById    String?
+  referredBy      User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals       User[]   @relation("Referrals")
+
+  // Связи
+  orders          Order[]
+  taskCompletions TaskCompletion[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastSeenAt      DateTime @default(now())
+
+  @@index([telegramId])
+  @@index([username])
+  @@index([referralCode])
+}
+
+// =====================================================
+// Заказы Stars / Premium (заглушка для будущей оплаты)
+// =====================================================
+model Order {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind              String   // "stars" | "premium"
+  recipientUsername String
+  amount            Int      // кол-во Stars или месяцев Premium
+  priceUsd          Decimal  @db.Decimal(10, 2)
+  status            String   @default("pending") // pending | paid | completed | failed | cancelled
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// =====================================================
+// Задания (для экрана Tasks)
+// =====================================================
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  reward      Int      // sparkles
+  url         String?
+  kind        String   // channel | bot | social | custom
+  active      Boolean  @default(true)
+  sort        Int      @default(0)
+
+  completions TaskCompletion[]
+  createdAt   DateTime @default(now())
+}
+
+model TaskCompletion {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId         String
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  rewardedAmount Int
+  completedAt    DateTime @default(now())
+
+  @@unique([userId, taskId])
+  @@index([userId])
+}

@@ -1,0 +1,21 @@
+{
+  "name": "stars-pay-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Telegram Mini App: Stars & Premium store (StarsPay / Sparkles)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev -w @stars-pay/api",
+    "dev:web": "npm run dev -w @stars-pay/web",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:migrate": "npm run db:migrate -w @stars-pay/api",
+    "db:studio": "npm run db:studio -w @stars-pay/api"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

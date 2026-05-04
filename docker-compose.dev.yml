@@ -1,0 +1,28 @@
+# Локальная разработка: только PostgreSQL.
+# Бэк/фронт запускаем напрямую через `npm run dev`.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# В .env пропишите DATABASE_URL=postgresql://starspay:starspay@localhost:5432/starspay
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      # на хосте часто уже слушает локальный postgres → используем 5433
+      - '5433:5432'
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-starspay}
+      POSTGRES_USER: ${POSTGRES_USER:-starspay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-starspay}
+    volumes:
+      - db-data-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-starspay}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-data-dev:

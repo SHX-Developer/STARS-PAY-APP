@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+.cache/
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Env files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Prisma
+apps/api/prisma/migrations/dev.db*
+
+# Docker
+.docker-volumes/
+
+# Local avatars cache (downloaded at runtime)
+apps/api/data/avatars/
+
+# Coverage
+coverage/
+.nyc_output/
