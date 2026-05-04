@@ -380,6 +380,7 @@ function SubAction({
     <button
       onClick={onClick}
       style={{
+        width: '100%',
         height: 46,
         borderRadius: 13,
         border: `1px solid ${TOKENS.glassBorder}`,

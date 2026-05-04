@@ -11,6 +11,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { ReferralsScreen } from './screens/ReferralsScreen';
 import { TasksScreen } from './screens/TasksScreen';
 import { OrdersScreen } from './screens/OrdersScreen';
+import { PaymentModal } from './components/PaymentModal';
 
 const BRAND = 'StarsPay';
 
@@ -25,29 +26,41 @@ export default function App() {
     setTimeout(() => setToast(null), 1800);
   };
 
-  const handleCheckout = async (o: {
+  const [pendingOrder, setPendingOrder] = useState<null | {
     kind: 'stars' | 'premium';
     username: string;
     amount: number;
-    price: string;
+    priceUzs: number;
+  }>(null);
+
+  const handleCheckout = (o: {
+    kind: 'stars' | 'premium';
+    username: string;
+    amount: number;
+    priceUzs: number;
   }) => {
+    setPendingOrder(o);
+  };
+
+  const handlePaymentConfirm = async () => {
+    if (!pendingOrder) return;
     try {
       const res = await api.createOrder({
-        kind: o.kind,
-        recipientUsername: o.username,
-        amount: o.amount,
-        priceUsd: Number(o.price),
+        kind: pendingOrder.kind,
+        recipientUsername: pendingOrder.username,
+        amount: pendingOrder.amount,
+        priceUsd: pendingOrder.priceUzs, // поле в БД исторически priceUsd, но кладём UZS
       });
+      setPendingOrder(null);
       if (res.referralBonus) {
-        showToast(`Order paid · referrer +${res.referralBonus.amount}★`);
+        showToast(t('order_placed_with_bonus', { n: res.referralBonus.amount }));
       } else {
-        showToast('Order placed');
+        showToast(t('order_placed'));
       }
-      // обновляем баланс юзера в шапке
       void refresh();
     } catch (e) {
       const err = e as Error & { body?: { error?: string } };
-      showToast(err.body?.error ?? err.message ?? 'Order failed');
+      showToast(err.body?.error ?? err.message ?? t('order_failed'));
     }
   };
 
@@ -117,7 +130,7 @@ export default function App() {
           zIndex: 2,
           // Глобальный отступ сверху для всех экранов: safe-area iOS + воздух под
           // камерой/notch и кнопками Telegram (close, settings).
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 36px)',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)',
         }}
       >
         <div key={screen} style={{ animation: 'fadeIn 280ms ease' }}>
@@ -126,6 +139,14 @@ export default function App() {
       </div>
       <BottomNav active={screen} onChange={setScreen} />
       <Toast message={toast} visible={!!toast} />
+
+      <PaymentModal
+        open={pendingOrder !== null}
+        order={pendingOrder}
+        onClose={() => setPendingOrder(null)}
+        onConfirm={() => void handlePaymentConfirm()}
+        onToast={showToast}
+      />
     </div>
   );
 }

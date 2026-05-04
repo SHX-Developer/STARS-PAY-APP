@@ -166,6 +166,14 @@ export function Icon({
           <path d="M5 12l7-7 7 7" />
         </svg>
       );
+    case 'upload':
+      return (
+        <svg {...props}>
+          <path d="M12 16V5" />
+          <path d="M7 10l5-5 5 5" />
+          <path d="M5 18.5h14" />
+        </svg>
+      );
     case 'close':
       return (
         <svg {...props}>

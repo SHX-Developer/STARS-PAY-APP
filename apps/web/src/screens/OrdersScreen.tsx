@@ -4,6 +4,7 @@ import { Glass } from '../components/Glass';
 import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
 import { useT } from '../lib/i18n-context';
+import { formatUzs } from '../lib/currency';
 import type { OrderItem, OrderStatus } from '../types';
 
 export function OrdersScreen() {
@@ -186,13 +187,15 @@ function OrderCard({
         >
           <div
             style={{
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: 800,
               color: TOKENS.text,
-              letterSpacing: -0.3,
+              letterSpacing: -0.2,
+              whiteSpace: 'nowrap',
             }}
           >
-            ${order.priceUsd}
+            {formatUzs(Number(order.priceUsd))}{' '}
+            <span style={{ fontSize: 10, color: TOKENS.textDim, fontWeight: 700 }}>UZS</span>
           </div>
           <StatusPill status={order.status} />
         </div>
@@ -551,7 +554,10 @@ function DetailsBox({ order }: { order: OrderItem }) {
           )
         }
       />
-      <DetailField label={tr('orders_total')} value={`$${order.priceUsd}`} />
+      <DetailField
+        label={tr('orders_total')}
+        value={`${formatUzs(Number(order.priceUsd))} UZS`}
+      />
     </div>
   );
 }

@@ -36,3 +36,32 @@ export function hapticTap() {
     /* noop */
   }
 }
+
+const TG_LINK_RE = /^https?:\/\/(?:t|telegram)\.me\//i;
+
+/**
+ * Универсальный "открыть ссылку" для Mini App.
+ * - t.me и telegram.me → openTelegramLink (нативная навигация в Telegram)
+ * - всё остальное      → openLink (in-app браузер) или window.open
+ *
+ * openTelegramLink/openLink не выбрасывают ошибки и ничего не возвращают,
+ * поэтому try/catch вокруг них не нужен.
+ */
+export function openExternal(url: string) {
+  hapticTap();
+  if (!url) return;
+  const tg = getTelegramWebApp();
+  if (!tg) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  if (TG_LINK_RE.test(url) && tg.openTelegramLink) {
+    tg.openTelegramLink(url);
+    return;
+  }
+  if (tg.openLink) {
+    tg.openLink(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}

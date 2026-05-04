@@ -62,7 +62,7 @@ export const DEFAULT_TASKS: DefaultTask[] = [
   {
     id: 'buy-stars-50',
     title: 'Buy 50 stars',
-    subtitle: 'Any pack ≥ 50',
+    subtitle: 'Exactly 50 stars',
     reward: 5,
     kind: 'buy_stars',
     url: null,
@@ -72,7 +72,7 @@ export const DEFAULT_TASKS: DefaultTask[] = [
   {
     id: 'buy-stars-100',
     title: 'Buy 100 stars',
-    subtitle: 'Any pack ≥ 100',
+    subtitle: 'Exactly 100 stars',
     reward: 10,
     kind: 'buy_stars',
     url: null,
@@ -82,7 +82,7 @@ export const DEFAULT_TASKS: DefaultTask[] = [
   {
     id: 'buy-stars-500',
     title: 'Buy 500 stars',
-    subtitle: 'Any pack ≥ 500',
+    subtitle: 'Exactly 500 stars',
     reward: 50,
     kind: 'buy_stars',
     url: null,
@@ -92,7 +92,7 @@ export const DEFAULT_TASKS: DefaultTask[] = [
   {
     id: 'buy-stars-1000',
     title: 'Buy 1000 stars',
-    subtitle: 'Any pack ≥ 1000',
+    subtitle: 'Exactly 1000 stars',
     reward: 100,
     kind: 'buy_stars',
     url: null,
@@ -209,19 +209,19 @@ export async function verifyTask(taskId: string, ctx: VerifyContext): Promise<Ve
     }
 
     case 'buy_stars': {
-      const min = def.params?.starsAmount ?? 0;
+      const exact = def.params?.starsAmount ?? 0;
       const found = await prisma.order.findFirst({
         where: {
           userId: ctx.userId,
           kind: 'stars',
-          amount: { gte: min },
+          amount: exact, // ровно столько (не "минимум")
           status: { in: [...FULFILLED_STATUSES] },
         },
         select: { id: true },
       });
       return found
         ? { ok: true }
-        : { ok: false, reason: `Buy at least ${min} stars first` };
+        : { ok: false, reason: `Buy exactly ${exact} stars first` };
     }
 
     case 'buy_premium': {

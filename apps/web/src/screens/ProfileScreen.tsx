@@ -4,7 +4,7 @@ import { Glass } from '../components/Glass';
 import { Icon, StarIcon } from '../components/Icon';
 import { BottomSheet } from '../components/BottomSheet';
 import { api } from '../lib/api';
-import { hapticTap } from '../lib/telegram';
+import { hapticTap, openExternal } from '../lib/telegram';
 import { useLang } from '../lib/i18n-context';
 import { LANGS, type Lang } from '../lib/i18n';
 import type { AppUser, TransactionItem } from '../types';
@@ -86,33 +86,6 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
       document.body.removeChild(ta);
     }
     onToast(t('common_code_copied'));
-  };
-
-  const openExternal = (url: string) => {
-    hapticTap();
-    const tg = window.Telegram?.WebApp;
-    // t.me ссылки открываем нативно
-    if (url.includes('t.me') && tg?.openTelegramLink) {
-      try {
-        tg.openTelegramLink(url);
-        return;
-      } catch {
-        /* noop */
-      }
-    }
-    if (tg?.openLink) {
-      try {
-        tg.openLink(url);
-        return;
-      } catch {
-        /* noop */
-      }
-    }
-    try {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
-      /* noop */
-    }
   };
 
   const handleWithdrawSuccess = (newBalance: number, txn: TransactionItem) => {

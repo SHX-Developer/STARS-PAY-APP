@@ -3,7 +3,7 @@ import { TOKENS } from '../lib/tokens';
 import { Glass } from '../components/Glass';
 import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
-import { hapticTap } from '../lib/telegram';
+import { hapticTap, openExternal } from '../lib/telegram';
 import { useT } from '../lib/i18n-context';
 import type { TaskItem, TasksResponse } from '../types';
 
@@ -12,6 +12,7 @@ interface TasksProps {
 }
 
 export function TasksScreen({ onToast }: TasksProps) {
+  const tr = useT();
   const [data, setData] = useState<TasksResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,30 +39,21 @@ export function TasksScreen({ onToast }: TasksProps) {
     async (task: TaskItem) => {
       if (busyId) return;
       hapticTap();
-      // Если у таски есть URL — открываем его перед проверкой (юзер должен
+      // Если у таски есть URL — открываем её перед проверкой (юзер должен
       // успеть выполнить действие). Telegram WebApp откроет ссылку нативно.
       if (task.url && task.status === 'available') {
-        try {
-          window.Telegram?.WebApp?.openTelegramLink?.(task.url);
-        } catch {
-          /* noop */
-        }
-        try {
-          window.open(task.url, '_blank', 'noopener,noreferrer');
-        } catch {
-          /* noop */
-        }
+        openExternal(task.url);
       }
       setBusyId(task.id);
       try {
         const res = await api.checkTask(task.id);
         if (res.ok) {
           if (res.awarded && res.awarded > 0) {
-            onToast(`+${res.awarded} stars`);
+            onToast(`+${res.awarded} ⭐️`);
           } else if (res.alreadyCompleted) {
-            onToast('Already completed');
+            onToast(tr('tasks_already_completed'));
           } else {
-            onToast('Done');
+            onToast(tr('common_done'));
           }
           // обновляем локально, без re-fetch
           setData((prev) =>
@@ -81,16 +73,16 @@ export function TasksScreen({ onToast }: TasksProps) {
               : prev,
           );
         } else {
-          onToast(res.reason ?? res.error ?? 'Not yet');
+          onToast(res.reason ?? res.error ?? tr('tasks_not_yet'));
         }
       } catch (e) {
         const err = e as Error & { body?: { reason?: string; error?: string } };
-        onToast(err.body?.reason ?? err.body?.error ?? err.message ?? 'Failed');
+        onToast(err.body?.reason ?? err.body?.error ?? err.message ?? tr('tasks_not_yet'));
       } finally {
         setBusyId(null);
       }
     },
-    [busyId, onToast],
+    [busyId, onToast, tr],
   );
 
   return (

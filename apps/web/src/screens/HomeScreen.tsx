@@ -4,6 +4,7 @@ import { Glass } from '../components/Glass';
 import { Icon, StarIcon, GemIcon } from '../components/Icon';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useT } from '../lib/i18n-context';
+import { starsToUzs, PREMIUM_UZS, formatUzs } from '../lib/currency';
 import type { AppUser } from '../types';
 
 interface HomeProps {
@@ -12,7 +13,7 @@ interface HomeProps {
     kind: 'stars' | 'premium';
     username: string;
     amount: number;
-    price: string;
+    priceUzs: number;
   }) => void;
   brand: string;
 }
@@ -50,10 +51,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
     return () => clearInterval(t);
   }, [banners.length]);
 
-  const price =
-    tab === 'stars'
-      ? (amount * 0.014).toFixed(2)
-      : ({ 3: '12.99', 6: '22.99', 12: '39.99' } as const)[premiumMonths];
+  const priceUzs = tab === 'stars' ? starsToUzs(amount) : PREMIUM_UZS[premiumMonths];
 
   const starOptions = [50, 100, 250, 500];
   const monthOptions = [
@@ -268,12 +266,12 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
             marginBottom: 14,
           }}
         >
-          Recipient
+          {tr('home_recipient')}
         </div>
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="@username"
+          placeholder={tr('home_username_placeholder')}
           style={{
             width: '100%',
             height: 52,
@@ -291,27 +289,16 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
           <>
             <div
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
                 marginTop: 18,
                 marginBottom: 8,
+                fontSize: 13,
+                fontWeight: 700,
+                color: TOKENS.textMute,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
               }}
             >
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: TOKENS.textMute,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                }}
-              >
-                Amount
-              </div>
-              <div style={{ fontSize: 13, color: TOKENS.textDim, fontWeight: 600 }}>
-                ≈ ${(amount * 0.014).toFixed(2)}
-              </div>
+              {tr('home_amount')}
             </div>
             <input
               value={amount}
@@ -349,7 +336,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
             padding: '0 4px',
           }}
         >
-          {tab === 'stars' ? 'Quick amount' : 'Duration'}
+          {tab === 'stars' ? tr('home_quick_amount') : tr('home_duration')}
         </div>
         <div
           style={{
@@ -372,7 +359,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
                   onClick={() => setPremiumMonths(o.v)}
                 >
                   <span style={{ fontSize: 18, fontWeight: 800 }}>{o.v}</span>
-                  <span style={{ fontSize: 11, opacity: 0.8, fontWeight: 600 }}>months</span>
+                  <span style={{ fontSize: 11, opacity: 0.8, fontWeight: 600 }}>{tr('home_months')}</span>
                 </Chip>
               ))}
         </div>
@@ -394,20 +381,21 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
               marginBottom: 2,
             }}
           >
-            TOTAL
+            {tr('home_total').toUpperCase()}
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span
               style={{
-                fontSize: 26,
+                fontSize: 24,
                 fontWeight: 800,
                 color: '#fff',
                 letterSpacing: -0.4,
+                lineHeight: 1.05,
               }}
             >
-              ${price}
+              {formatUzs(priceUzs)}
             </span>
-            <span style={{ fontSize: 12, color: TOKENS.textDim }}>USD</span>
+            <span style={{ fontSize: 12, color: TOKENS.textDim, fontWeight: 700 }}>UZS</span>
           </div>
         </div>
         <PrimaryButton
@@ -418,12 +406,12 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
               kind: tab,
               username,
               amount: tab === 'stars' ? amount : premiumMonths,
-              price: String(price),
+              priceUzs,
             })
           }
           style={{ minWidth: 150, height: 52, fontSize: 15 }}
         >
-          Checkout →
+          {tr('home_checkout')} →
         </PrimaryButton>
       </Glass>
     </div>
