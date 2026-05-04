@@ -55,10 +55,13 @@ export function validateTelegramInitData(
   const hash = params.get('hash');
   if (!hash) throw new InitDataError('hash is missing', 'NO_HASH');
 
-  // 1. Собираем data_check_string: все поля кроме hash, отсортированные, формата key=value, разделитель \n
+  // 1. Собираем data_check_string: ВСЕ поля кроме hash, отсортированные.
+  // Поле `signature` (Ed25519, появилось в Bot API 8.0) должно ВХОДИТЬ в строку:
+  // Telegram при HMAC-валидации исключает только `hash`. Если исключать
+  // signature тоже — на свежих клиентах HMAC не сходится → BAD_HASH.
   const pairs: string[] = [];
   for (const [key, value] of params.entries()) {
-    if (key === 'hash' || key === 'signature') continue;
+    if (key === 'hash') continue;
     pairs.push(`${key}=${value}`);
   }
   pairs.sort();
