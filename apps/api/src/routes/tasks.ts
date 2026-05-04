@@ -67,10 +67,21 @@ export async function tasksRoutes(app: FastifyInstance) {
     const userId = (req.user as { sub: string }).sub;
     const { id } = req.params as { id: string };
 
-    const task = await prisma.task.findUnique({ where: { id } });
+    const [task, user] = await Promise.all([
+      prisma.task.findUnique({ where: { id } }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, telegramId: true },
+      }),
+    ]);
+
     if (!task || !task.active) {
       reply.code(404);
       return { error: 'task_not_found' };
+    }
+    if (!user) {
+      reply.code(401);
+      return { error: 'user_not_found' };
     }
 
     // Уже выполнено?
@@ -81,7 +92,12 @@ export async function tasksRoutes(app: FastifyInstance) {
       return { ok: true, alreadyCompleted: true, awarded: 0 };
     }
 
-    const verdict = await verifyTask(task.kind as TaskKind, { userId });
+    // Верификация — для channel дёргаем Bot API getChatMember,
+    // для buy_* проверяем заказы в БД, для instagram self-claim.
+    const verdict = await verifyTask(task.id, {
+      userId: user.id,
+      telegramId: user.telegramId,
+    });
     if (!verdict.ok) {
       reply.code(409);
       return { ok: false, error: 'not_yet', reason: verdict.reason };
@@ -89,7 +105,6 @@ export async function tasksRoutes(app: FastifyInstance) {
 
     // Атомарно: записать completion + начислить stars в баланс
     const result = await prisma.$transaction(async (tx) => {
-      // ещё одна проверка под транзакцией (защита от гонки)
       const dup = await tx.taskCompletion.findUnique({
         where: { userId_taskId: { userId, taskId: id } },
       });
