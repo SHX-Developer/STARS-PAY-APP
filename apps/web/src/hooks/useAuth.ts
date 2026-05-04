@@ -30,7 +30,15 @@ export function useAuth() {
       setToken(res.token);
       setState({ status: 'authed', user: res.user });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'auth failed';
+      const e = err as Error & {
+        status?: number;
+        body?: { code?: string; message?: string; error?: string };
+      };
+      const code = e.body?.code;
+      const detail = e.body?.message ?? e.body?.error;
+      const msg = code
+        ? `${code}${detail ? `: ${detail}` : ''}`
+        : detail ?? e.message ?? 'auth failed';
       setState({ status: 'error', message: msg });
     }
   }, []);
