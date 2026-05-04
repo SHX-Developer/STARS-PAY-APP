@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, type ReactNode } from 'react';
 import { TOKENS } from '../lib/tokens';
 import { Glass } from '../components/Glass';
-import { Icon } from '../components/Icon';
+import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
 import { hapticTap } from '../lib/telegram';
 import type { ReferralsResponse, ReferralItem } from '../types';
@@ -35,60 +35,32 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
   return (
     <div
       style={{
-        padding: '8px 16px 110px',
+        padding: '0 18px 110px',
         display: 'flex',
         flexDirection: 'column',
         gap: 22,
       }}
     >
       {/* Заголовок */}
-      <div style={{ paddingTop: 8 }}>
-        <div
-          style={{
-            fontSize: 26,
-            fontWeight: 800,
-            color: TOKENS.text,
-            letterSpacing: -0.5,
-            lineHeight: 1.15,
-          }}
-        >
-          О системе
-        </div>
-        <div
-          style={{
-            fontSize: 14,
-            color: TOKENS.textDim,
-            marginTop: 6,
-            lineHeight: 1.5,
-          }}
-        >
-          Делитесь ссылкой с друзьями. Когда они открывают приложение по вашей
-          ссылке и совершают заказы — вы получаете бонусные sparkles.
-        </div>
-      </div>
+      <Header />
 
       {loading && !data ? (
         <SkeletonBlock />
       ) : error && !data ? (
         <Glass radius={18} padding={16}>
           <div style={{ color: '#FF8B8B', fontSize: 14, fontWeight: 600 }}>
-            Не удалось загрузить рефералов
+            Failed to load referrals
           </div>
           <div style={{ color: TOKENS.textMute, fontSize: 12, marginTop: 6 }}>{error}</div>
           <button onClick={() => void load()} style={retryBtnStyle}>
-            Повторить
+            Retry
           </button>
         </Glass>
       ) : data ? (
         <>
-          {/* Блок 1: Реферальная ссылка */}
-          <ReferralLinkBlock link={data.link} onToast={onToast} />
-
-          {/* Блок 2: Статистика */}
-          <StatsBlock count={data.count} />
-
-          {/* Блок 3: Список приглашённых */}
-          <InvitedList items={data.items} />
+          <ReferralLinkCard link={data.link} onToast={onToast} />
+          <StatsRow count={data.count} thisMonth={data.countThisMonth} earned={data.earnedSparkles} />
+          <InvitedList items={data.items} count={data.count} />
         </>
       ) : null}
     </div>
@@ -96,9 +68,54 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
 }
 
 // =====================================================
-// Блок 1 — реферальная ссылка
+// Header — REFERRALS / Earn from friends / 10% sparkles back
 // =====================================================
-function ReferralLinkBlock({
+function Header() {
+  return (
+    <div style={{ marginTop: 4 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: 1.6,
+          color: TOKENS.textMute,
+          textTransform: 'uppercase',
+        }}
+      >
+        Referrals
+      </div>
+      <div
+        style={{
+          fontSize: 32,
+          fontWeight: 800,
+          color: TOKENS.text,
+          letterSpacing: -0.8,
+          lineHeight: 1.05,
+          marginTop: 4,
+        }}
+      >
+        Earn from friends
+      </div>
+      <div
+        style={{
+          fontSize: 14.5,
+          color: TOKENS.textDim,
+          lineHeight: 1.45,
+          marginTop: 10,
+        }}
+      >
+        Get{' '}
+        <span style={{ color: TOKENS.gold, fontWeight: 700 }}>10% sparkles</span>{' '}
+        back from every order your invited friends make. Forever.
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// Карточка реферальной ссылки + Copy / QR / Share
+// =====================================================
+function ReferralLinkCard({
   link,
   onToast,
 }: {
@@ -110,10 +127,8 @@ function ReferralLinkBlock({
   const handleCopy = async () => {
     hapticTap();
     try {
-      // Telegram WebView и современные браузеры поддерживают navigator.clipboard
       await navigator.clipboard.writeText(link);
     } catch {
-      // Фолбек через скрытый textarea
       const ta = document.createElement('textarea');
       ta.value = link;
       ta.style.position = 'fixed';
@@ -128,173 +143,353 @@ function ReferralLinkBlock({
       document.body.removeChild(ta);
     }
     setCopied(true);
-    onToast('Ссылка скопирована');
+    onToast('Link copied');
     setTimeout(() => setCopied(false), 1600);
   };
 
-  return (
-    <div>
-      <SectionLabel>Ваша ссылка</SectionLabel>
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          alignItems: 'stretch',
-        }}
-      >
-        {/* readonly glass input */}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            height: 52,
-            borderRadius: 14,
-            padding: '0 16px',
-            background: 'rgba(255,255,255,0.04)',
-            border: `1px solid ${TOKENS.glassBorder}`,
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-            overflow: 'hidden',
-          }}
-        >
-          <input
-            value={link}
-            readOnly
-            onFocus={(e) => e.currentTarget.select()}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              height: '100%',
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: TOKENS.text,
-              fontSize: 14,
-              fontFamily:
-                'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-              fontWeight: 500,
-              letterSpacing: -0.1,
-              textOverflow: 'ellipsis',
-            }}
-          />
-        </div>
+  const handleShare = () => {
+    hapticTap();
+    const text = `Join me on StarsPay`;
+    const tg = window.Telegram?.WebApp;
+    // Telegram нативный share — открывает выбор чата
+    if (tg) {
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+      // openTelegramLink есть у WebApp, но fall-back через window.open надёжнее
+      try {
+        // @ts-expect-error — openTelegramLink не в нашем минимальном типе
+        tg.openTelegramLink?.(shareUrl);
+        return;
+      } catch {
+        /* noop */
+      }
+    }
+    if (navigator.share) {
+      void navigator.share({ url: link, text });
+      return;
+    }
+    void handleCopy();
+  };
 
-        {/* кнопка копирования */}
-        <button
-          onClick={() => void handleCopy()}
-          aria-label="Скопировать ссылку"
-          style={{
-            width: 52,
-            height: 52,
-            flexShrink: 0,
-            borderRadius: 14,
-            border: 'none',
-            cursor: 'pointer',
-            background: copied
-              ? 'linear-gradient(135deg, rgba(75,200,150,0.85), rgba(40,120,90,0.95))'
-              : 'linear-gradient(135deg, #9B7BFF 0%, #7B5CE6 100%)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background 220ms ease, transform 160ms ease',
-            boxShadow: copied
-              ? '0 6px 18px rgba(75,200,150,0.35), inset 0 1px 0 rgba(255,255,255,0.3)'
-              : '0 6px 18px rgba(123,92,230,0.4), inset 0 1px 0 rgba(255,255,255,0.25)',
-          }}
-        >
-          <Icon name={copied ? 'check' : 'copy'} size={20} color="#fff" strokeWidth={2} />
-        </button>
-      </div>
-    </div>
-  );
-}
+  const handleQr = () => {
+    hapticTap();
+    onToast('QR code coming soon');
+  };
 
-// =====================================================
-// Блок 2 — статистика (крупное число)
-// =====================================================
-function StatsBlock({ count }: { count: number }) {
   return (
     <Glass
       radius={22}
-      padding={22}
+      padding={18}
       intense
       style={{
-        background: 'linear-gradient(135deg, rgba(155,123,255,0.18), rgba(123,92,230,0.06))',
+        background:
+          'linear-gradient(135deg, rgba(155,123,255,0.18), rgba(123,92,230,0.06))',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* мягкий блик */}
+      {/* фоновый блик */}
       <div
         style={{
           position: 'absolute',
-          top: -40,
-          right: -30,
-          width: 160,
-          height: 160,
+          top: -50,
+          right: -40,
+          width: 200,
+          height: 200,
           borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(155,123,255,0.35), transparent 65%)',
-          filter: 'blur(14px)',
+            'radial-gradient(circle, rgba(155,123,255,0.28), transparent 65%)',
+          filter: 'blur(20px)',
           pointerEvents: 'none',
         }}
       />
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 16 }}>
+
+      <div style={{ position: 'relative' }}>
         <div
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 16,
-            background: 'rgba(155,123,255,0.18)',
-            border: `1px solid ${TOKENS.glassBorderStrong}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 1.2,
+            color: TOKENS.textMute,
+            textTransform: 'uppercase',
+            marginBottom: 10,
           }}
         >
-          <Icon name="referrals" size={26} color={TOKENS.violet} strokeWidth={1.6} />
+          Your referral link
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+
+        {/* link input + copy button */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
           <div
             style={{
-              fontSize: 44,
-              fontWeight: 800,
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              height: 50,
+              borderRadius: 13,
+              padding: '0 14px',
+              background: 'rgba(0,0,0,0.25)',
+              border: `1px solid ${TOKENS.glassBorder}`,
+              boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.2)',
+              overflow: 'hidden',
+            }}
+          >
+            <input
+              value={link}
+              readOnly
+              onFocus={(e) => e.currentTarget.select()}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                height: '100%',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: TOKENS.text,
+                fontSize: 15,
+                fontFamily:
+                  'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                fontWeight: 600,
+                letterSpacing: -0.2,
+                textOverflow: 'ellipsis',
+              }}
+            />
+          </div>
+          <button
+            onClick={() => void handleCopy()}
+            aria-label="Copy referral link"
+            style={{
+              width: 50,
+              height: 50,
+              flexShrink: 0,
+              borderRadius: 13,
+              border: 'none',
+              cursor: 'pointer',
+              background: copied
+                ? 'linear-gradient(135deg, rgba(75,200,150,0.9), rgba(40,120,90,0.95))'
+                : 'linear-gradient(135deg, #9B7BFF 0%, #7B5CE6 100%)',
               color: '#fff',
-              letterSpacing: -1.5,
-              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 220ms ease, transform 160ms ease',
+              boxShadow: copied
+                ? '0 6px 18px rgba(75,200,150,0.35), inset 0 1px 0 rgba(255,255,255,0.3)'
+                : '0 6px 18px rgba(123,92,230,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
             }}
           >
-            {count.toLocaleString()}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: TOKENS.textMute,
-              fontWeight: 600,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-              marginTop: 6,
-            }}
-          >
-            Всего приглашено
-          </div>
+            <Icon name={copied ? 'check' : 'copy'} size={20} color="#fff" strokeWidth={2} />
+          </button>
+        </div>
+
+        {/* QR / Share */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+          <SubAction icon="qr" label="QR code" onClick={handleQr} />
+          <SubAction icon="share" label="Share" onClick={handleShare} />
         </div>
       </div>
     </Glass>
   );
 }
 
+function SubAction({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        height: 46,
+        borderRadius: 13,
+        border: `1px solid ${TOKENS.glassBorder}`,
+        background: 'rgba(0,0,0,0.22)',
+        color: TOKENS.text,
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        fontFamily: 'inherit',
+        transition: 'background 200ms ease',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+      }}
+    >
+      <Icon name={icon} size={16} color={TOKENS.text} strokeWidth={1.8} />
+      {label}
+    </button>
+  );
+}
+
 // =====================================================
-// Блок 3 — список приглашённых
+// Двухколоночная статистика — TOTAL INVITED + EARNED
 // =====================================================
-function InvitedList({ items }: { items: ReferralItem[] }) {
+function StatsRow({
+  count,
+  thisMonth,
+  earned,
+}: {
+  count: number;
+  thisMonth: number;
+  earned: number;
+}) {
+  const earnedUsd = (earned * 0.014).toFixed(2);
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {/* Total invited */}
+      <Glass radius={18} padding={16}>
+        <StatLabel>Total invited</StatLabel>
+        <div
+          style={{
+            fontSize: 36,
+            fontWeight: 800,
+            color: TOKENS.text,
+            letterSpacing: -1,
+            lineHeight: 1,
+            marginTop: 8,
+          }}
+        >
+          {count.toLocaleString()}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            marginTop: 10,
+            color: thisMonth > 0 ? '#7BD89B' : TOKENS.textMute,
+            fontSize: 12.5,
+            fontWeight: 600,
+          }}
+        >
+          <Icon
+            name="arrow-up"
+            size={12}
+            color={thisMonth > 0 ? '#7BD89B' : TOKENS.textMute}
+            strokeWidth={2.4}
+          />
+          <span>{thisMonth} this month</span>
+        </div>
+      </Glass>
+
+      {/* Earned */}
+      <Glass
+        radius={18}
+        padding={16}
+        intense
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(242,198,107,0.16), rgba(123,92,230,0.08))',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: -30,
+            right: -30,
+            width: 120,
+            height: 120,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(242,198,107,0.25), transparent 65%)',
+            filter: 'blur(14px)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div style={{ position: 'relative' }}>
+          <StatLabel>Earned</StatLabel>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 6,
+              marginTop: 8,
+            }}
+          >
+            <StarIcon size={22} />
+            <span
+              style={{
+                fontSize: 32,
+                fontWeight: 800,
+                color: TOKENS.gold,
+                letterSpacing: -0.8,
+                lineHeight: 1,
+              }}
+            >
+              {earned.toLocaleString()}
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: TOKENS.textDim,
+              fontWeight: 500,
+              marginTop: 10,
+            }}
+          >
+            ≈ ${earnedUsd} USD
+          </div>
+        </div>
+      </Glass>
+    </div>
+  );
+}
+
+function StatLabel({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        fontSize: 10.5,
+        fontWeight: 700,
+        letterSpacing: 1.2,
+        color: TOKENS.textMute,
+        textTransform: 'uppercase',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// =====================================================
+// Список приглашённых — YOUR INVITES / N friends / cards
+// =====================================================
+function InvitedList({ items, count }: { items: ReferralItem[]; count: number }) {
   return (
     <div>
-      <SectionLabel>Приглашённые</SectionLabel>
+      <div style={{ padding: '0 4px', marginBottom: 12 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 1.4,
+            color: TOKENS.textMute,
+            textTransform: 'uppercase',
+          }}
+        >
+          Your invites
+        </div>
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: TOKENS.text,
+            letterSpacing: -0.4,
+            marginTop: 4,
+          }}
+        >
+          {count} {count === 1 ? 'friend' : 'friends'}
+        </div>
+      </div>
+
       {items.length === 0 ? (
         <Glass radius={16} padding="20px 16px">
           <div
@@ -306,13 +501,13 @@ function InvitedList({ items }: { items: ReferralItem[] }) {
               lineHeight: 1.5,
             }}
           >
-            Пока никого. Поделитесь ссылкой выше — приглашённые появятся здесь.
+            No friends yet. Share your link above — invitees will show up here.
           </div>
         </Glass>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {items.map((it) => (
-            <ReferralCard key={it.id} item={it} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {items.map((it, idx) => (
+            <ReferralCard key={it.id} item={it} idx={idx} />
           ))}
         </div>
       )}
@@ -320,30 +515,40 @@ function InvitedList({ items }: { items: ReferralItem[] }) {
   );
 }
 
-function ReferralCard({ item }: { item: ReferralItem }) {
+// Палитра для аватарок-инициалов (когда нет photo)
+const AVATAR_PALETTE = [
+  ['#3CC8B6', '#0F8C7E'], // teal
+  ['#5B9DEE', '#2E6BC8'], // blue
+  ['#3CC8B6', '#0F8C7E'], // teal repeat
+  ['#9B7BFF', '#5B3DCC'], // violet
+  ['#F2C66B', '#B47A1A'], // gold
+  ['#FF7BAA', '#B43C78'], // rose
+];
+
+function ReferralCard({ item, idx }: { item: ReferralItem; idx: number }) {
   const fullName = [item.firstName, item.lastName].filter(Boolean).join(' ');
   const handle = item.username ? `@${item.username}` : fullName || `id ${item.id.slice(0, 6)}`;
   const initial = (item.firstName || item.username || '?').charAt(0).toUpperCase();
+  const palette = AVATAR_PALETTE[idx % AVATAR_PALETTE.length] ?? AVATAR_PALETTE[0]!;
 
   return (
     <Glass
-      radius={14}
-      padding="10px 14px"
+      radius={16}
+      padding="12px 14px"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 12,
       }}
     >
-      {/* avatar */}
       {item.avatarUrl ? (
         <img
           src={item.avatarUrl}
           alt={handle}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 36,
+            width: 40,
+            height: 40,
+            borderRadius: 40,
             objectFit: 'cover',
             border: '1px solid rgba(255,255,255,0.08)',
             flexShrink: 0,
@@ -352,58 +557,64 @@ function ReferralCard({ item }: { item: ReferralItem }) {
       ) : (
         <div
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 36,
-            background: 'linear-gradient(135deg, #9B7BFF, #5B3DCC)',
+            width: 40,
+            height: 40,
+            borderRadius: 40,
+            background: `linear-gradient(135deg, ${palette[0]}, ${palette[1]})`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 700,
             flexShrink: 0,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)',
           }}
         >
           {initial}
         </div>
       )}
 
-      {/* handle */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          fontSize: 14,
-          fontWeight: 600,
-          color: TOKENS.text,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {handle}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14.5,
+            fontWeight: 700,
+            color: TOKENS.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {handle}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: TOKENS.textMute,
+            fontWeight: 500,
+            marginTop: 2,
+          }}
+        >
+          joined {timeAgo(item.joinedAt)}
+        </div>
       </div>
 
-      {/* orders count */}
+      {/* orders pill */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 4,
           flexShrink: 0,
-          padding: '4px 10px',
+          padding: '6px 12px',
           borderRadius: 999,
-          background: 'rgba(255,255,255,0.04)',
-          border: `1px solid ${TOKENS.glassBorder}`,
+          background: 'rgba(155,123,255,0.18)',
+          border: '1px solid rgba(155,123,255,0.32)',
+          color: '#fff',
+          fontSize: 12.5,
+          fontWeight: 700,
+          letterSpacing: 0.1,
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 700, color: TOKENS.text }}>
-          {item.ordersCount}
-        </span>
-        <span style={{ fontSize: 11, color: TOKENS.textMute, fontWeight: 500 }}>
-          {item.ordersCount === 1 ? 'заказ' : pluralOrders(item.ordersCount)}
-        </span>
+        {item.ordersCount} {item.ordersCount === 1 ? 'order' : 'orders'}
       </div>
     </Glass>
   );
@@ -412,31 +623,35 @@ function ReferralCard({ item }: { item: ReferralItem }) {
 // =====================================================
 // Helpers
 // =====================================================
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        fontSize: 11,
-        color: TOKENS.textMute,
-        fontWeight: 600,
-        letterSpacing: 0.6,
-        textTransform: 'uppercase',
-        marginBottom: 10,
-        padding: '0 4px',
-      }}
-    >
-      {children}
-    </div>
-  );
+function timeAgo(iso: string): string {
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return 'recently';
+  const diffSec = Math.max(0, (Date.now() - ts) / 1000);
+  if (diffSec < 60) return 'just now';
+  const m = Math.floor(diffSec / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  const w = Math.floor(d / 7);
+  if (w < 5) return `${w}w ago`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  const y = Math.floor(d / 365);
+  return `${y}y ago`;
 }
 
 function SkeletonBlock() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Skel h={52} />
-      <Skel h={92} />
-      <Skel h={56} />
-      <Skel h={56} />
+      <Skel h={130} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <Skel h={100} />
+        <Skel h={100} />
+      </div>
+      <Skel h={64} />
+      <Skel h={64} />
     </div>
   );
 }
@@ -469,12 +684,3 @@ const retryBtnStyle = {
   cursor: 'pointer',
   fontFamily: 'inherit',
 } as const;
-
-// Простая русская плюрализация для "заказ"
-function pluralOrders(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'заказ';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'заказа';
-  return 'заказов';
-}

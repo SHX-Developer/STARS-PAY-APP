@@ -143,6 +143,29 @@ export function Icon({
           <path d="M5 12.5l4.5 4.5L19 7.5" />
         </svg>
       );
+    case 'qr':
+      return (
+        <svg {...props}>
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <path d="M14 14h3v3M14 19h3M19 14v7M14 21h7" />
+        </svg>
+      );
+    case 'share':
+      return (
+        <svg {...props}>
+          <path d="M22 2L11 13" />
+          <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+        </svg>
+      );
+    case 'arrow-up':
+      return (
+        <svg {...props}>
+          <path d="M12 19V5" />
+          <path d="M5 12l7-7 7 7" />
+        </svg>
+      );
     case 'close':
       return (
         <svg {...props}>

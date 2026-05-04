@@ -2,10 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { prisma } from '../lib/prisma.js';
 
+// Сколько sparkles начисляем юзеру за каждый заказ его реферала.
+// Это placeholder — потом замените на реальную бизнес-логику (10% от суммы и т.п.).
+const SPARKLES_PER_REFERRAL_ORDER = 10;
+
 // =====================================================
 // GET /api/referrals
-// Возвращает реф-код, реф-ссылку, общее количество приглашённых
-// и список юзеров с количеством их заказов.
+// Возвращает реф-код, реф-ссылку, статистику и список приглашённых.
 // =====================================================
 export async function referralRoutes(app: FastifyInstance) {
   app.get('/referrals', { preHandler: [app.authenticate] }, async (req, reply) => {
@@ -20,8 +23,10 @@ export async function referralRoutes(app: FastifyInstance) {
       return { error: 'user_not_found' };
     }
 
-    // Параллельно: список рефералов (с подсчётом заказов) и общее число
-    const [referrals, totalCount] = await Promise.all([
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+
+    const [referrals, totalCount, monthCount] = await Promise.all([
       prisma.user.findMany({
         where: { referredById: me.id },
         orderBy: { createdAt: 'desc' },
@@ -38,12 +43,21 @@ export async function referralRoutes(app: FastifyInstance) {
         },
       }),
       prisma.user.count({ where: { referredById: me.id } }),
+      prisma.user.count({
+        where: { referredById: me.id, createdAt: { gte: monthAgo } },
+      }),
     ]);
+
+    // Сумма всех заказов рефералов × ставка → начисленные sparkles.
+    const totalReferralOrders = referrals.reduce((s, r) => s + r._count.orders, 0);
+    const earnedSparkles = totalReferralOrders * SPARKLES_PER_REFERRAL_ORDER;
 
     return {
       code: me.referralCode,
       link: buildReferralLink(me.referralCode),
       count: totalCount,
+      countThisMonth: monthCount,
+      earnedSparkles,
       items: referrals.map((r) => ({
         id: r.id,
         username: r.username,
@@ -51,7 +65,7 @@ export async function referralRoutes(app: FastifyInstance) {
         lastName: r.lastName,
         avatarUrl: r.avatarLocalPath ?? r.photoUrl ?? null,
         ordersCount: r._count.orders,
-        createdAt: r.createdAt.toISOString(),
+        joinedAt: r.createdAt.toISOString(),
       })),
     };
   });
@@ -60,7 +74,6 @@ export async function referralRoutes(app: FastifyInstance) {
 function buildReferralLink(code: string): string {
   const bot = config.TELEGRAM_BOT_USERNAME;
   if (!bot) {
-    // Бот не сконфигурён — отдаём deep-link на копирование. Юзер сам подставит.
     return `?start=${encodeURIComponent(code)}`;
   }
   const app = config.TELEGRAM_MINIAPP_NAME;

@@ -97,7 +97,9 @@ export default function App() {
           overflowY: 'auto',
           overflowX: 'hidden',
           zIndex: 2,
-          paddingTop: 'max(env(safe-area-inset-top), 12px)',
+          // Глобальный отступ сверху для всех экранов: safe-area iOS + воздух под
+          // камерой/notch и кнопками Telegram (close, settings).
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 36px)',
         }}
       >
         <div key={screen} style={{ animation: 'fadeIn 280ms ease' }}>

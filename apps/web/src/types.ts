@@ -32,13 +32,15 @@ export interface ReferralItem {
   lastName: string | null;
   avatarUrl: string | null;
   ordersCount: number;
-  createdAt: string;
+  joinedAt: string;
 }
 
 export interface ReferralsResponse {
   code: string;
   link: string;
   count: number;
+  countThisMonth: number;
+  earnedSparkles: number;
   items: ReferralItem[];
 }
 
