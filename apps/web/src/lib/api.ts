@@ -4,6 +4,7 @@ import type {
   ReferralsResponse,
   TasksResponse,
   TaskCheckResponse,
+  CreateOrderResponse,
 } from '../types';
 
 // Базовый URL — пустая строка означает same-origin (так в проде через Traefik).
@@ -75,6 +76,17 @@ export const api = {
   checkTask(id: string) {
     return request<TaskCheckResponse>(`/api/tasks/${encodeURIComponent(id)}/check`, {
       method: 'POST',
+    });
+  },
+  createOrder(payload: {
+    kind: 'stars' | 'premium';
+    recipientUsername: string;
+    amount: number;
+    priceUsd: number;
+  }) {
+    return request<CreateOrderResponse>('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 };

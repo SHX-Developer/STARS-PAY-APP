@@ -1,10 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { prisma } from '../lib/prisma.js';
-
-// Сколько stars начисляем юзеру за каждый заказ его реферала.
-// Это placeholder — потом замените на реальную бизнес-логику (10% от суммы и т.п.).
-const STARS_PER_REFERRAL_ORDER = 10;
+import { REFERRAL_FIRST_ORDER_BONUS } from '../lib/referral-bonus.js';
 
 // =====================================================
 // GET /api/referrals
@@ -26,7 +23,7 @@ export async function referralRoutes(app: FastifyInstance) {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
 
-    const [referrals, totalCount, monthCount] = await Promise.all([
+    const [referrals, totalCount, monthCount, paidBonusCount] = await Promise.all([
       prisma.user.findMany({
         where: { referredById: me.id },
         orderBy: { createdAt: 'desc' },
@@ -39,6 +36,7 @@ export async function referralRoutes(app: FastifyInstance) {
           avatarLocalPath: true,
           photoUrl: true,
           createdAt: true,
+          referrerBonusGiven: true,
           _count: { select: { orders: true } },
         },
       }),
@@ -46,11 +44,14 @@ export async function referralRoutes(app: FastifyInstance) {
       prisma.user.count({
         where: { referredById: me.id, createdAt: { gte: monthAgo } },
       }),
+      // Сколько рефералов УЖЕ принесли бонус (= имеют первый paid-заказ).
+      prisma.user.count({
+        where: { referredById: me.id, referrerBonusGiven: true },
+      }),
     ]);
 
-    // Сумма всех заказов рефералов × ставка → начисленные stars.
-    const totalReferralOrders = referrals.reduce((s, r) => s + r._count.orders, 0);
-    const earnedStars = totalReferralOrders * STARS_PER_REFERRAL_ORDER;
+    // Реально начисленные stars = (рефералы с первым paid-заказом) × 10.
+    const earnedStars = paidBonusCount * REFERRAL_FIRST_ORDER_BONUS;
 
     return {
       code: me.referralCode,
@@ -58,6 +59,7 @@ export async function referralRoutes(app: FastifyInstance) {
       count: totalCount,
       countThisMonth: monthCount,
       earnedStars,
+      bonusPerReferral: REFERRAL_FIRST_ORDER_BONUS,
       items: referrals.map((r) => ({
         id: r.id,
         username: r.username,
@@ -65,6 +67,7 @@ export async function referralRoutes(app: FastifyInstance) {
         lastName: r.lastName,
         avatarUrl: r.avatarLocalPath ?? r.photoUrl ?? null,
         ordersCount: r._count.orders,
+        bonusGiven: r.referrerBonusGiven,
         joinedAt: r.createdAt.toISOString(),
       })),
     };

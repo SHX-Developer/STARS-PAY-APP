@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { TOKENS } from './lib/tokens';
 import { useAuth } from './hooks/useAuth';
+import { api } from './lib/api';
 import { AppBackground } from './components/AppBackground';
 import { BottomNav, type Screen } from './components/BottomNav';
 import { Toast } from './components/Toast';
@@ -13,7 +14,7 @@ import { Placeholder } from './screens/Placeholder';
 const BRAND = 'StarsPay';
 
 export default function App() {
-  const { state } = useAuth();
+  const { state, refresh } = useAuth();
   const [screen, setScreen] = useState<Screen>('home');
   const [toast, setToast] = useState<string | null>(null);
   const [lang, setLang] = useState<string>('en');
@@ -21,6 +22,32 @@ export default function App() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
+  };
+
+  const handleCheckout = async (o: {
+    kind: 'stars' | 'premium';
+    username: string;
+    amount: number;
+    price: string;
+  }) => {
+    try {
+      const res = await api.createOrder({
+        kind: o.kind,
+        recipientUsername: o.username,
+        amount: o.amount,
+        priceUsd: Number(o.price),
+      });
+      if (res.referralBonus) {
+        showToast(`Order paid · referrer +${res.referralBonus.amount}★`);
+      } else {
+        showToast('Order placed');
+      }
+      // обновляем баланс юзера в шапке
+      void refresh();
+    } catch (e) {
+      const err = e as Error & { body?: { error?: string } };
+      showToast(err.body?.error ?? err.message ?? 'Order failed');
+    }
   };
 
   if (state.status === 'loading') {
@@ -60,7 +87,7 @@ export default function App() {
       <HomeScreen
         user={user}
         brand={BRAND}
-        onCheckout={(o) => showToast(`Order draft: ${o.kind} → ${o.username}`)}
+        onCheckout={(o) => void handleCheckout(o)}
       />
     ),
     profile: <ProfileScreen user={user} lang={lang} onLang={setLang} />,

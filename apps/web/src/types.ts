@@ -32,6 +32,7 @@ export interface ReferralItem {
   lastName: string | null;
   avatarUrl: string | null;
   ordersCount: number;
+  bonusGiven: boolean;
   joinedAt: string;
 }
 
@@ -41,7 +42,24 @@ export interface ReferralsResponse {
   count: number;
   countThisMonth: number;
   earnedStars: number;
+  bonusPerReferral: number;
   items: ReferralItem[];
+}
+
+// Order
+export interface OrderItem {
+  id: string;
+  kind: string;
+  recipientUsername: string;
+  amount: number;
+  priceUsd: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface CreateOrderResponse {
+  order: OrderItem;
+  referralBonus: { creditedTo: string; amount: number } | null;
 }
 
 // =====================================================

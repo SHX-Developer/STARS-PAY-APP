@@ -36,6 +36,9 @@ model User {
   referredById    String?
   referredBy      User?    @relation("Referrals", fields: [referredById], references: [id])
   referrals       User[]   @relation("Referrals")
+  // True если этот юзер уже принёс бонус своему пригласителю
+  // (за свой первый paid-заказ). Защита от двойного начисления.
+  referrerBonusGiven Boolean @default(false)
 
   // Связи
   orders          Order[]

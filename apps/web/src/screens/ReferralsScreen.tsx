@@ -42,7 +42,7 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
       }}
     >
       {/* Заголовок */}
-      <Header />
+      <Header bonus={data?.bonusPerReferral ?? 10} />
 
       {loading && !data ? (
         <SkeletonBlock />
@@ -59,6 +59,7 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
       ) : data ? (
         <>
           <ReferralLinkCard link={data.link} onToast={onToast} />
+          <HowItWorksCard bonus={data.bonusPerReferral} />
           <StatsRow count={data.count} thisMonth={data.countThisMonth} earned={data.earnedStars} />
           <InvitedList items={data.items} count={data.count} />
         </>
@@ -68,9 +69,78 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
 }
 
 // =====================================================
-// Header — REFERRALS / Earn from friends / 10% stars back
+// Инфо-блок «How it works»
 // =====================================================
-function Header() {
+function HowItWorksCard({ bonus }: { bonus: number }) {
+  const steps = [
+    { n: '1', text: 'Share your referral link with a friend' },
+    { n: '2', text: 'They join StarsPay through your link' },
+    { n: '3', text: `On their first order — you get +${bonus} stars` },
+  ];
+  return (
+    <Glass
+      radius={18}
+      padding={16}
+      style={{
+        background:
+          'linear-gradient(135deg, rgba(242,198,107,0.08), rgba(155,123,255,0.04))',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: 1.2,
+          color: TOKENS.textMute,
+          textTransform: 'uppercase',
+          marginBottom: 12,
+        }}
+      >
+        How it works
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {steps.map((s) => (
+          <div key={s.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 7,
+                background: 'rgba(155,123,255,0.18)',
+                border: `1px solid ${TOKENS.glassBorderStrong}`,
+                color: TOKENS.violet,
+                fontSize: 11.5,
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                marginTop: 1,
+              }}
+            >
+              {s.n}
+            </div>
+            <div
+              style={{
+                fontSize: 13.5,
+                color: TOKENS.text,
+                fontWeight: 500,
+                lineHeight: 1.45,
+              }}
+            >
+              {s.text}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Glass>
+  );
+}
+
+// =====================================================
+// Header — REFERRALS / Earn from friends / +N stars per first order
+// =====================================================
+function Header({ bonus }: { bonus: number }) {
   return (
     <div style={{ marginTop: 4 }}>
       <div
@@ -105,8 +175,8 @@ function Header() {
         }}
       >
         Get{' '}
-        <span style={{ color: TOKENS.gold, fontWeight: 700 }}>10% stars</span>{' '}
-        back from every order your invited friends make. Forever.
+        <span style={{ color: TOKENS.gold, fontWeight: 700 }}>+{bonus} stars</span>{' '}
+        for every referral's first order. Credited automatically.
       </div>
     </div>
   );
@@ -598,20 +668,29 @@ function ReferralCard({ item, idx }: { item: ReferralItem; idx: number }) {
         </div>
       </div>
 
-      {/* orders pill */}
+      {/* orders pill — золотая если бонус уже зачислен, фиолетовая иначе */}
       <div
         style={{
           flexShrink: 0,
           padding: '6px 12px',
           borderRadius: 999,
-          background: 'rgba(155,123,255,0.18)',
-          border: '1px solid rgba(155,123,255,0.32)',
-          color: '#fff',
+          background: item.bonusGiven
+            ? 'rgba(242,198,107,0.18)'
+            : 'rgba(155,123,255,0.18)',
+          border: item.bonusGiven
+            ? '1px solid rgba(242,198,107,0.4)'
+            : '1px solid rgba(155,123,255,0.32)',
+          color: item.bonusGiven ? TOKENS.gold : '#fff',
           fontSize: 12.5,
           fontWeight: 700,
           letterSpacing: 0.1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
         }}
+        title={item.bonusGiven ? 'Bonus credited' : 'No paid order yet'}
       >
+        {item.bonusGiven && <StarIcon size={11} glow={false} />}
         {item.ordersCount} {item.ordersCount === 1 ? 'order' : 'orders'}
       </div>
     </Glass>
