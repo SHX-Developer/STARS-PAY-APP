@@ -147,7 +147,7 @@ export function ProfileScreen({ user, referralsCount = 0, lang, onLang }: Profil
               textTransform: 'uppercase',
             }}
           >
-            Sparkle balance
+            Star balance
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 8 }}>
             <StarIcon size={32} />
@@ -160,11 +160,11 @@ export function ProfileScreen({ user, referralsCount = 0, lang, onLang }: Profil
                 lineHeight: 1,
               }}
             >
-              {user.sparkleBalance.toLocaleString()}
+              {user.starBalance.toLocaleString()}
             </span>
           </div>
           <div style={{ fontSize: 12.5, color: TOKENS.textDim, marginTop: 6 }}>
-            ≈ ${(user.sparkleBalance * 0.014).toFixed(2)} USD
+            ≈ ${(user.starBalance * 0.014).toFixed(2)} USD
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>

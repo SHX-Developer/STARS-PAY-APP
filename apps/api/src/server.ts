@@ -10,6 +10,7 @@ import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
 import { referralRoutes } from './routes/referrals.js';
+import { tasksRoutes } from './routes/tasks.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -90,6 +91,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await api.register(authRoutes); // /auth/telegram
       await api.register(meRoutes); // /me
       await api.register(referralRoutes); // /referrals
+      await api.register(tasksRoutes); // /tasks, /tasks/:id/check
     },
     { prefix: '/api' },
   );

@@ -2,9 +2,9 @@ import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { prisma } from '../lib/prisma.js';
 
-// Сколько sparkles начисляем юзеру за каждый заказ его реферала.
+// Сколько stars начисляем юзеру за каждый заказ его реферала.
 // Это placeholder — потом замените на реальную бизнес-логику (10% от суммы и т.п.).
-const SPARKLES_PER_REFERRAL_ORDER = 10;
+const STARS_PER_REFERRAL_ORDER = 10;
 
 // =====================================================
 // GET /api/referrals
@@ -48,16 +48,16 @@ export async function referralRoutes(app: FastifyInstance) {
       }),
     ]);
 
-    // Сумма всех заказов рефералов × ставка → начисленные sparkles.
+    // Сумма всех заказов рефералов × ставка → начисленные stars.
     const totalReferralOrders = referrals.reduce((s, r) => s + r._count.orders, 0);
-    const earnedSparkles = totalReferralOrders * SPARKLES_PER_REFERRAL_ORDER;
+    const earnedStars = totalReferralOrders * STARS_PER_REFERRAL_ORDER;
 
     return {
       code: me.referralCode,
       link: buildReferralLink(me.referralCode),
       count: totalCount,
       countThisMonth: monthCount,
-      earnedSparkles,
+      earnedStars,
       items: referrals.map((r) => ({
         id: r.id,
         username: r.username,

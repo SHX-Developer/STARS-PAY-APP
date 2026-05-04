@@ -26,7 +26,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
   const banners = [
     {
       id: 'stars',
-      title: 'Send sparkles\ninstantly',
+      title: 'Send stars\ninstantly',
       sub: 'Top up any account in seconds',
       gradient:
         'linear-gradient(135deg, rgba(242,198,107,0.35) 0%, rgba(155,123,255,0.4) 100%)',
@@ -111,7 +111,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
         >
           <StarIcon size={16} />
           <span style={{ color: TOKENS.text, fontWeight: 700, fontSize: 14 }}>
-            {user.sparkleBalance.toLocaleString()}
+            {user.starBalance.toLocaleString()}
           </span>
         </Glass>
       </div>
@@ -212,7 +212,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
         />
         {(
           [
-            { id: 'stars', label: 'Sparkles' },
+            { id: 'stars', label: 'Stars' },
             { id: 'premium', label: 'Premium' },
           ] as const
         ).map((o) => (

@@ -1,4 +1,10 @@
-import type { AuthResponse, MeResponse, ReferralsResponse } from '../types';
+import type {
+  AuthResponse,
+  MeResponse,
+  ReferralsResponse,
+  TasksResponse,
+  TaskCheckResponse,
+} from '../types';
 
 // Базовый URL — пустая строка означает same-origin (так в проде через Traefik).
 // В dev Vite-прокси перенаправляет /api → :4000.
@@ -62,5 +68,13 @@ export const api = {
   },
   referrals() {
     return request<ReferralsResponse>('/api/referrals');
+  },
+  tasks() {
+    return request<TasksResponse>('/api/tasks');
+  },
+  checkTask(id: string) {
+    return request<TaskCheckResponse>(`/api/tasks/${encodeURIComponent(id)}/check`, {
+      method: 'POST',
+    });
   },
 };

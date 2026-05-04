@@ -136,7 +136,9 @@ export function serializeUser(u: {
     isPremium: u.isPremium,
     // Предпочитаем локально сохранённую аватарку, если есть
     avatarUrl: u.avatarLocalPath ?? u.photoUrl ?? null,
-    sparkleBalance: u.sparkleBalance,
+    // На уровне API называем "stars" (Telegram Stars). В БД поле осталось
+    // sparkleBalance чтобы не делать breaking-миграцию — это технический псевдоним.
+    starBalance: u.sparkleBalance,
     tier: u.tier,
     referralCode: u.referralCode,
     createdAt: u.createdAt.toISOString(),

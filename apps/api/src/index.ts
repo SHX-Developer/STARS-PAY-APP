@@ -1,9 +1,21 @@
 import { buildServer } from './server.js';
 import { config } from './config.js';
 import { disconnectPrisma } from './lib/prisma.js';
+import { seedDefaultTasks } from './lib/tasks.js';
 
 async function main() {
   const app = await buildServer();
+
+  // Идемпотентный seed заданий (upsert по id) — нужен чтобы FK
+  // TaskCompletion → Task работал и юзеры могли начать выполнять таски.
+  try {
+    await seedDefaultTasks();
+    app.log.info('✓ default tasks seeded');
+  } catch (err) {
+    app.log.error({ err }, 'failed to seed default tasks');
+    // не падаем — приложение может работать без тасков
+  }
+
   try {
     await app.listen({ port: config.PORT, host: config.HOST });
     app.log.info(`✨ StarsPay API listening on ${config.HOST}:${config.PORT}`);

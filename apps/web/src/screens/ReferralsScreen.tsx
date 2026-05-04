@@ -59,7 +59,7 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
       ) : data ? (
         <>
           <ReferralLinkCard link={data.link} onToast={onToast} />
-          <StatsRow count={data.count} thisMonth={data.countThisMonth} earned={data.earnedSparkles} />
+          <StatsRow count={data.count} thisMonth={data.countThisMonth} earned={data.earnedStars} />
           <InvitedList items={data.items} count={data.count} />
         </>
       ) : null}
@@ -68,7 +68,7 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
 }
 
 // =====================================================
-// Header — REFERRALS / Earn from friends / 10% sparkles back
+// Header — REFERRALS / Earn from friends / 10% stars back
 // =====================================================
 function Header() {
   return (
@@ -105,7 +105,7 @@ function Header() {
         }}
       >
         Get{' '}
-        <span style={{ color: TOKENS.gold, fontWeight: 700 }}>10% sparkles</span>{' '}
+        <span style={{ color: TOKENS.gold, fontWeight: 700 }}>10% stars</span>{' '}
         back from every order your invited friends make. Forever.
       </div>
     </div>
