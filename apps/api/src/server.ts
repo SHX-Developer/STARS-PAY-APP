@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import multipart from '@fastify/multipart';
 import { stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { join, normalize } from 'node:path';
@@ -14,6 +15,7 @@ import { tasksRoutes } from './routes/tasks.js';
 import { ordersRoutes } from './routes/orders.js';
 import { walletRoutes } from './routes/wallet.js';
 import { telegramWebhookRoutes } from './routes/telegram-webhook.js';
+import { lookupRoutes } from './routes/lookup.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -29,7 +31,8 @@ export async function buildServer(): Promise<FastifyInstance> {
         ? { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' } }
         : undefined,
     },
-    bodyLimit: 1_000_000, // 1 MB
+    // 10 MB — multipart с чеком до 8 MB + headers/fields с запасом
+    bodyLimit: 10 * 1024 * 1024,
     trustProxy: true, // мы за Traefik в Dokploy
   });
 
@@ -47,6 +50,11 @@ export async function buildServer(): Promise<FastifyInstance> {
   await app.register(rateLimit, {
     max: 120,
     timeWindow: '1 minute',
+  });
+
+  // Multipart — для загрузки чеков в /api/orders
+  await app.register(multipart, {
+    limits: { fileSize: 8 * 1024 * 1024, files: 1 },
   });
 
   // JWT
@@ -98,6 +106,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await api.register(ordersRoutes); // /orders
       await api.register(walletRoutes); // /transactions, /withdraw
       await api.register(telegramWebhookRoutes); // /telegram/webhook
+      await api.register(lookupRoutes); // /lookup
     },
     { prefix: '/api' },
   );

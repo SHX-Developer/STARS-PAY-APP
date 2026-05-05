@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { prisma } from '../lib/prisma.js';
 import { validateTelegramInitData, InitDataError } from '../lib/telegram.js';
 import { downloadAvatar, fetchAvatarViaBot, deterministicReferralCode } from '../lib/avatar.js';
+import { creditReferralSignupBonus } from '../lib/referral-bonus.js';
 
 const AuthBody = z.object({
   initData: z.string().min(1),
@@ -69,6 +70,9 @@ export async function authRoutes(app: FastifyInstance) {
       if (inviter) referredById = inviter.id;
     }
 
+    // Если юзер уже существует и у него уже есть referredById (например создан
+    // через webhook /start <code> ДО открытия Mini App) — мы тоже сможем
+    // зачислить signup-бонус: helper сам делает dedup-проверку.
     const user = await prisma.user.upsert({
       where: { telegramId },
       create: {
@@ -95,7 +99,17 @@ export async function authRoutes(app: FastifyInstance) {
       },
     });
 
-    // 4. Подписываем JWT
+    // 4. Если у юзера есть пригласитель — зачисляем ему +2★ за регистрацию
+    //    (helper идемпотентный: повторно не зачислит)
+    if (user.referredById) {
+      try {
+        await creditReferralSignupBonus(user.referredById, user.id);
+      } catch (err) {
+        req.log.error({ err }, 'creditReferralSignupBonus failed');
+      }
+    }
+
+    // 5. Подписываем JWT
     const token = await reply.jwtSign(
       {
         sub: user.id,

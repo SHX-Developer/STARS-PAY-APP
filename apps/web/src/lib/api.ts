@@ -36,7 +36,9 @@ export function setToken(token: string | null) {
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers = new Headers(opts.headers);
   headers.set('Accept', 'application/json');
-  if (opts.body && !headers.has('Content-Type')) {
+  // FormData — браузер сам ставит multipart Content-Type с boundary
+  const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+  if (opts.body && !headers.has('Content-Type') && !isFormData) {
     headers.set('Content-Type', 'application/json');
   }
   const token = getToken();
@@ -86,11 +88,38 @@ export const api = {
     recipientUsername: string;
     amount: number;
     priceUsd: number;
+    receipt?: File | null;
   }) {
+    if (payload.receipt) {
+      const fd = new FormData();
+      fd.append('kind', payload.kind);
+      fd.append('recipientUsername', payload.recipientUsername);
+      fd.append('amount', String(payload.amount));
+      fd.append('priceUsd', String(payload.priceUsd));
+      fd.append('receipt', payload.receipt);
+      // Не ставим Content-Type — браузер сам поставит multipart с boundary.
+      return request<CreateOrderResponse>('/api/orders', {
+        method: 'POST',
+        body: fd,
+      });
+    }
     return request<CreateOrderResponse>('/api/orders', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        kind: payload.kind,
+        recipientUsername: payload.recipientUsername,
+        amount: payload.amount,
+        priceUsd: payload.priceUsd,
+      }),
     });
+  },
+  lookupUsername(username: string) {
+    return request<{
+      found: boolean;
+      username?: string;
+      name?: string | null;
+      isPremium?: boolean;
+    }>(`/api/lookup?username=${encodeURIComponent(username)}`);
   },
   orders() {
     return request<OrdersResponse>('/api/orders');

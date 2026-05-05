@@ -76,6 +76,12 @@ model Order {
   deliveringAt      DateTime?
   deliveredAt       DateTime?
 
+  // URL чека в S3 (загружается клиентом при оформлении заказа)
+  receiptUrl        String?
+  // ID сообщения в TELEGRAM_ORDER_CHANNEL — нужен чтобы редактировать пост
+  // при смене статуса (mark paid / delivering / etc.)
+  channelMessageId  Int?
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

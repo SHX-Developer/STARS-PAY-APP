@@ -34,20 +34,20 @@ interface PaymentModalProps {
   open: boolean;
   order: OrderDraft | null;
   onClose: () => void;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: (receipt: File) => Promise<void> | void;
   onToast: (msg: string) => void;
 }
 
 export function PaymentModal({ open, order, onClose, onConfirm, onToast }: PaymentModalProps) {
   const tr = useT();
-  const [receiptName, setReceiptName] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Сбрасываем стейт при каждом открытии
   useEffect(() => {
     if (open) {
-      setReceiptName(null);
+      setReceiptFile(null);
       setSubmitting(false);
     }
   }, [open]);
@@ -90,7 +90,7 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
     hapticTap();
     const f = e.target.files?.[0];
     if (!f) {
-      setReceiptName(null);
+      setReceiptFile(null);
       return;
     }
     if (!/^image\//.test(f.type)) {
@@ -101,15 +101,15 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
       onToast(tr('payment_too_large'));
       return;
     }
-    setReceiptName(f.name);
+    setReceiptFile(f);
   };
 
   const handleSubmit = async () => {
-    if (!receiptName || submitting) return;
+    if (!receiptFile || submitting) return;
     hapticTap();
     setSubmitting(true);
     try {
-      await onConfirm();
+      await onConfirm(receiptFile);
     } finally {
       setSubmitting(false);
     }
@@ -225,9 +225,9 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
           padding: 16,
           borderRadius: 14,
           border: `1.5px dashed ${
-            receiptName ? 'rgba(75,200,150,0.5)' : 'rgba(155,123,255,0.4)'
+            receiptFile ? 'rgba(75,200,150,0.5)' : 'rgba(155,123,255,0.4)'
           }`,
-          background: receiptName ? 'rgba(75,200,150,0.06)' : 'rgba(155,123,255,0.04)',
+          background: receiptFile ? 'rgba(75,200,150,0.06)' : 'rgba(155,123,255,0.04)',
           cursor: 'pointer',
           fontFamily: 'inherit',
           color: 'inherit',
@@ -245,9 +245,9 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
             height: 44,
             borderRadius: 12,
             flexShrink: 0,
-            background: receiptName ? 'rgba(75,200,150,0.16)' : 'rgba(255,255,255,0.04)',
+            background: receiptFile ? 'rgba(75,200,150,0.16)' : 'rgba(255,255,255,0.04)',
             border: `1px solid ${
-              receiptName ? 'rgba(75,200,150,0.35)' : TOKENS.glassBorder
+              receiptFile ? 'rgba(75,200,150,0.35)' : TOKENS.glassBorder
             }`,
             display: 'flex',
             alignItems: 'center',
@@ -255,9 +255,9 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
           }}
         >
           <Icon
-            name={receiptName ? 'check' : 'upload'}
+            name={receiptFile ? 'check' : 'upload'}
             size={20}
-            color={receiptName ? '#7BD89B' : '#fff'}
+            color={receiptFile ? '#7BD89B' : '#fff'}
             strokeWidth={2}
           />
         </div>
@@ -272,7 +272,7 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
               whiteSpace: 'nowrap',
             }}
           >
-            {receiptName ?? tr('payment_upload_title')}
+            {receiptFile?.name ?? tr('payment_upload_title')}
           </div>
           <div style={{ fontSize: 12, color: TOKENS.textMute, fontWeight: 500, marginTop: 2 }}>
             {tr('payment_upload_sub')}
@@ -290,23 +290,23 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
       {/* Submit */}
       <button
         onClick={() => void handleSubmit()}
-        disabled={!receiptName || submitting}
+        disabled={!receiptFile || submitting}
         style={{
           width: '100%',
           height: 54,
           borderRadius: 16,
           border: 'none',
           background:
-            receiptName && !submitting
+            receiptFile && !submitting
               ? 'linear-gradient(135deg, #9B7BFF 0%, #7B5CE6 100%)'
               : 'rgba(255,255,255,0.06)',
-          color: receiptName && !submitting ? '#fff' : TOKENS.textDim,
+          color: receiptFile && !submitting ? '#fff' : TOKENS.textDim,
           fontSize: 15.5,
           fontWeight: 800,
-          cursor: receiptName && !submitting ? 'pointer' : 'not-allowed',
+          cursor: receiptFile && !submitting ? 'pointer' : 'not-allowed',
           fontFamily: 'inherit',
           boxShadow:
-            receiptName && !submitting
+            receiptFile && !submitting
               ? '0 8px 24px rgba(123,92,230,0.4), inset 0 1px 0 rgba(255,255,255,0.25)'
               : 'none',
           transition: 'all 220ms ease',

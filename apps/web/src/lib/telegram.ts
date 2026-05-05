@@ -12,7 +12,19 @@ export function getInitData(): string | null {
 }
 
 export function getStartParam(): string | undefined {
-  return getTelegramWebApp()?.initDataUnsafe?.start_param;
+  // 1. start_param из Telegram WebApp — выставляется когда Mini App открыта
+  //    через deep-link `https://t.me/<bot>/<short>?startapp=<code>`.
+  const fromTg = getTelegramWebApp()?.initDataUnsafe?.start_param;
+  if (fromTg) return fromTg;
+  // 2. ?start=<code> или ?startapp=<code> в URL — когда Mini App открыта
+  //    через web_app inline-button с подставленной ссылкой.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get('start') ?? params.get('startapp');
+    return v ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function applyTelegramTheme() {

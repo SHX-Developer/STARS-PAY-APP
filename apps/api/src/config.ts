@@ -43,6 +43,29 @@ const EnvSchema = z.object({
   // URL приветственной картинки.
   WELCOME_IMAGE_URL: emptyToUndef(z.string().url()),
 
+  // ID канала (или группы) для пересылки заказов админам.
+  // Бот должен быть админом канала. Формат: "-1001234567890".
+  TELEGRAM_ORDER_CHANNEL: emptyToUndef(z.string()),
+
+  // Таймаут общих внешних http-запросов (Bot API, Buypin) в мс.
+  TELEGRAM_API_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+
+  // Buypin (внешний lookup API) — имя/премиум-статус по @username.
+  EXTERNAL_API_BASE_URL: emptyToUndef(z.string().url()),
+  EXTERNAL_API_KEY: emptyToUndef(z.string().min(8)),
+
+  // Yandex Cloud Object Storage (S3-совместимый) — для чеков и любых файлов.
+  AWS_REGION: emptyToUndef(z.string()),
+  AWS_ACCESS_KEY_ID: emptyToUndef(z.string()),
+  AWS_SECRET_ACCESS_KEY: emptyToUndef(z.string()),
+  AWS_S3_BUCKET: emptyToUndef(z.string()),
+  AWS_S3_ENDPOINT: emptyToUndef(z.string().url()),
+  AWS_S3_FORCE_PATH_STYLE: z.preprocess(
+    (v) => (v === '' || v == null ? false : String(v).toLowerCase() === 'true'),
+    z.boolean(),
+  ),
+  AWS_S3_PUBLIC_BASE: emptyToUndef(z.string().url()),
+
   // JWT — для подписи сессионного токена, выдаваемого фронту
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 chars'),
   JWT_EXPIRES_IN: z.string().default('7d'),

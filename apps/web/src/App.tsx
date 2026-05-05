@@ -40,7 +40,7 @@ export default function App() {
     setPendingOrder(o);
   };
 
-  const handlePaymentConfirm = async () => {
+  const handlePaymentConfirm = async (receipt: File) => {
     if (!pendingOrder) return;
     try {
       const res = await api.createOrder({
@@ -48,6 +48,7 @@ export default function App() {
         recipientUsername: pendingOrder.username,
         amount: pendingOrder.amount,
         priceUsd: pendingOrder.priceUzs, // поле в БД исторически priceUsd, но кладём UZS
+        receipt,
       });
       setPendingOrder(null);
       if (res.referralBonus) {
@@ -141,7 +142,7 @@ export default function App() {
         open={pendingOrder !== null}
         order={pendingOrder}
         onClose={() => setPendingOrder(null)}
-        onConfirm={() => void handlePaymentConfirm()}
+        onConfirm={(receipt) => void handlePaymentConfirm(receipt)}
         onToast={showToast}
       />
     </div>

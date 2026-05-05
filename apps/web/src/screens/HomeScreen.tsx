@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode, type TouchEvent } from 'react';
 import { TOKENS } from '../lib/tokens';
 import { Glass } from '../components/Glass';
 import { Icon, StarIcon, GemIcon } from '../components/Icon';
@@ -6,7 +6,14 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useT } from '../lib/i18n-context';
 import { hapticTap } from '../lib/telegram';
 import { starsToUzs, PREMIUM_UZS, formatUzs } from '../lib/currency';
+import { api } from '../lib/api';
 import type { AppUser } from '../types';
+
+interface LookupState {
+  status: 'idle' | 'loading' | 'found' | 'not_found' | 'error';
+  name?: string | null;
+  isPremium?: boolean;
+}
 
 interface HomeProps {
   user: AppUser;
@@ -25,6 +32,32 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
   const [amount, setAmount] = useState(100);
   const [premiumMonths, setPremiumMonths] = useState<3 | 6 | 12>(3);
   const [bannerIdx, setBannerIdx] = useState(0);
+  const [lookup, setLookup] = useState<LookupState>({ status: 'idle' });
+
+  // debounced username lookup
+  useEffect(() => {
+    const u = username.trim().replace(/^@/, '');
+    if (u.length < 3) {
+      setLookup({ status: 'idle' });
+      return;
+    }
+    setLookup({ status: 'loading' });
+    const t = setTimeout(async () => {
+      try {
+        const res = await api.lookupUsername(u);
+        if (res.found) {
+          setLookup({ status: 'found', name: res.name ?? null, isPremium: res.isPremium ?? false });
+        } else {
+          setLookup({ status: 'not_found' });
+        }
+      } catch (err) {
+        // 404 от Buypin — не ошибка, просто не нашли
+        const status = (err as { status?: number }).status;
+        setLookup({ status: status === 404 ? 'not_found' : 'error' });
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [username]);
 
   const banners = [
     {
@@ -54,10 +87,10 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
 
   // touch-свайп для баннера
   const touchStartX = useRef<number | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => {
+  const onTouchStart = (e: TouchEvent) => {
     touchStartX.current = e.touches[0]?.clientX ?? null;
   };
-  const onTouchEnd = (e: React.TouchEvent) => {
+  const onTouchEnd = (e: TouchEvent) => {
     if (touchStartX.current === null) return;
     const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
     if (Math.abs(dx) > 40) {
@@ -322,6 +355,7 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
             outline: 'none',
           }}
         />
+        <LookupHint state={lookup} />
         {tab === 'stars' && (
           <>
             <div
@@ -459,6 +493,80 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
           {tr('home_checkout')} →
         </PrimaryButton>
       </Glass>
+    </div>
+  );
+}
+
+function LookupHint({ state }: { state: LookupState }) {
+  if (state.status === 'idle') return null;
+  const tone =
+    state.status === 'found'
+      ? { bg: 'rgba(75,200,150,0.10)', border: 'rgba(75,200,150,0.35)', color: '#7BD89B' }
+      : state.status === 'not_found'
+        ? { bg: 'rgba(255,123,123,0.08)', border: 'rgba(255,123,123,0.30)', color: '#FF9E9E' }
+        : state.status === 'loading'
+          ? { bg: 'rgba(155,123,255,0.10)', border: 'rgba(155,123,255,0.30)', color: TOKENS.textDim }
+          : { bg: 'rgba(255,255,255,0.04)', border: TOKENS.glassBorder, color: TOKENS.textMute };
+
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        padding: '10px 14px',
+        borderRadius: 12,
+        background: tone.bg,
+        border: `1px solid ${tone.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        fontSize: 13,
+        color: tone.color,
+        fontWeight: 600,
+        minHeight: 38,
+      }}
+    >
+      {state.status === 'loading' && (
+        <span
+          style={{
+            width: 14,
+            height: 14,
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.18)',
+            borderTopColor: TOKENS.violet,
+            animation: 'spin 0.85s linear infinite',
+            flexShrink: 0,
+          }}
+        />
+      )}
+      {state.status === 'loading' && <span>Checking…</span>}
+      {state.status === 'not_found' && <span>User not found</span>}
+      {state.status === 'error' && <span>Lookup unavailable</span>}
+      {state.status === 'found' && (
+        <>
+          <Icon name="check" size={14} color={tone.color} strokeWidth={2.4} />
+          <span style={{ color: TOKENS.text, fontWeight: 700 }}>{state.name ?? 'Found'}</span>
+          {state.isPremium && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: 'rgba(155,123,255,0.18)',
+                border: '1px solid rgba(155,123,255,0.35)',
+                color: '#C9B4FF',
+                fontSize: 10.5,
+                fontWeight: 800,
+                letterSpacing: 0.4,
+                textTransform: 'uppercase',
+              }}
+            >
+              💎 Premium
+            </span>
+          )}
+        </>
+      )}
     </div>
   );
 }
