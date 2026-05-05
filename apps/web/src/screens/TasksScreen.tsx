@@ -5,7 +5,21 @@ import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
 import { hapticTap, openExternal } from '../lib/telegram';
 import { useT } from '../lib/i18n-context';
+import type { TKey } from '../lib/i18n';
 import type { TaskItem, TasksResponse } from '../types';
+
+// Маппинг id таски (в БД) → i18n-ключи. id здесь стабильны (см. lib/tasks.ts).
+const TASK_I18N: Record<string, { title: TKey; sub: TKey }> = {
+  'channel-starspay': { title: 'task_channel_starspay_title', sub: 'task_channel_starspay_sub' },
+  'instagram-starspay': { title: 'task_instagram_starspay_title', sub: 'task_instagram_starspay_sub' },
+  'buy-stars-50': { title: 'task_buy_stars_50_title', sub: 'task_buy_stars_50_sub' },
+  'buy-stars-100': { title: 'task_buy_stars_100_title', sub: 'task_buy_stars_100_sub' },
+  'buy-stars-500': { title: 'task_buy_stars_500_title', sub: 'task_buy_stars_500_sub' },
+  'buy-stars-1000': { title: 'task_buy_stars_1000_title', sub: 'task_buy_stars_1000_sub' },
+  'buy-premium-3': { title: 'task_buy_premium_3_title', sub: 'task_buy_premium_3_sub' },
+  'buy-premium-6': { title: 'task_buy_premium_6_title', sub: 'task_buy_premium_6_sub' },
+  'buy-premium-12': { title: 'task_buy_premium_12_title', sub: 'task_buy_premium_12_sub' },
+};
 
 interface TasksProps {
   onToast: (msg: string) => void;
@@ -136,23 +150,11 @@ function Header() {
     <div style={{ marginTop: 4 }}>
       <div
         style={{
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 1.6,
-          color: TOKENS.textMute,
-          textTransform: 'uppercase',
-        }}
-      >
-        TASKS
-      </div>
-      <div
-        style={{
           fontSize: 32,
           fontWeight: 800,
           color: TOKENS.text,
           letterSpacing: -0.8,
           lineHeight: 1.05,
-          marginTop: 4,
         }}
       >
         {tr('tasks_title')}
@@ -323,7 +325,7 @@ function TaskCard({
             whiteSpace: 'nowrap',
           }}
         >
-          {task.title}
+          {TASK_I18N[task.id] ? tr(TASK_I18N[task.id]!.title) : task.title}
         </div>
         <div
           style={{
@@ -369,7 +371,7 @@ function TaskCard({
               minWidth: 0,
             }}
           >
-            {task.subtitle}
+            {TASK_I18N[task.id] ? tr(TASK_I18N[task.id]!.sub) : task.subtitle}
           </div>
         </div>
       </div>

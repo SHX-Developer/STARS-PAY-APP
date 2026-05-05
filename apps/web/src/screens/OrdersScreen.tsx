@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react';
 import { TOKENS } from '../lib/tokens';
 import { Glass } from '../components/Glass';
 import { Icon, StarIcon } from '../components/Icon';
 import { api } from '../lib/api';
-import { useT } from '../lib/i18n-context';
+import { useT, useLang } from '../lib/i18n-context';
+import { hapticTap } from '../lib/telegram';
 import { formatUzs } from '../lib/currency';
 import type { OrderItem, OrderStatus } from '../types';
 
@@ -85,23 +86,11 @@ function Header() {
     <div style={{ marginTop: 4 }}>
       <div
         style={{
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 1.6,
-          color: TOKENS.textMute,
-          textTransform: 'uppercase',
-        }}
-      >
-        {tr('orders_history').toUpperCase()}
-      </div>
-      <div
-        style={{
           fontSize: 32,
           fontWeight: 800,
           color: TOKENS.text,
           letterSpacing: -0.8,
           lineHeight: 1.05,
-          marginTop: 4,
         }}
       >
         {tr('orders_title')}
@@ -122,15 +111,30 @@ function OrderCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const tr = useT();
+  const { lang } = useLang();
   const isStars = order.kind === 'stars';
-  const title = isStars ? `${order.amount} stars` : `Premium · ${order.amount}m`;
+  const title = isStars ? `${order.amount} ${tr('common_stars')}` : `Premium · ${order.amount}${tr('home_months')}`;
   const recipient = `@${order.recipientUsername}`;
+
+  // Анимация раскрытия через max-height. Замеряем нативную высоту и используем
+  // её как target — чище любого фиксированного значения.
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const [innerHeight, setInnerHeight] = useState(0);
+  useEffect(() => {
+    if (innerRef.current) {
+      setInnerHeight(innerRef.current.scrollHeight);
+    }
+  }, [expanded, order]);
 
   return (
     <Glass radius={18} padding={0} style={{ overflow: 'hidden' }}>
       {/* верхняя строка — кликабельная для toggle */}
       <button
-        onClick={onToggle}
+        onClick={() => {
+          hapticTap();
+          onToggle();
+        }}
         style={{
           width: '100%',
           padding: '14px 14px',
@@ -172,7 +176,7 @@ function OrderCard({
               whiteSpace: 'nowrap',
             }}
           >
-            {recipient} · {formatOrderDate(order.createdAt)}
+            {recipient} · {formatOrderDate(order.createdAt, tr, lang)}
           </div>
         </div>
 
@@ -214,9 +218,18 @@ function OrderCard({
         </div>
       </button>
 
-      {/* раскрываемая часть */}
-      {expanded && (
-        <div style={{ padding: '4px 14px 16px' }}>
+      {/* раскрываемая часть со smooth animation */}
+      <div
+        style={{
+          maxHeight: expanded ? innerHeight : 0,
+          opacity: expanded ? 1 : 0,
+          overflow: 'hidden',
+          transition:
+            'max-height 360ms cubic-bezier(0.4,0,0.2,1), opacity 280ms ease',
+          willChange: 'max-height, opacity',
+        }}
+      >
+        <div ref={innerRef} style={{ padding: '4px 14px 16px' }}>
           <div
             style={{
               height: 1,
@@ -227,7 +240,7 @@ function OrderCard({
           <Timeline order={order} />
           <DetailsBox order={order} />
         </div>
-      )}
+      </div>
     </Glass>
   );
 }
@@ -346,6 +359,7 @@ const STATUS_LABEL_KEY: Record<
 // =====================================================
 function Timeline({ order }: { order: OrderItem }) {
   const tr = useT();
+  const { lang } = useLang();
   const stages: { key: string; title: string; at: string | null }[] = [
     { key: 'created', title: tr('orders_step_created'), at: order.createdAt },
     { key: 'paid', title: tr('orders_step_paid'), at: order.paidAt },
@@ -375,8 +389,8 @@ function Timeline({ order }: { order: OrderItem }) {
             time={
               s.at
                 ? i === 0
-                  ? formatOrderDate(s.at)
-                  : formatRelativeFromCreated(s.at, order.createdAt)
+                  ? formatOrderDate(s.at, tr, lang)
+                  : formatRelativeFromCreated(s.at, order.createdAt, tr, lang)
                 : '—'
             }
             state={state}
@@ -651,23 +665,29 @@ function EmptyState() {
 // =====================================================
 // Date helpers
 // =====================================================
-function formatOrderDate(iso: string): string {
+// helpers получают tr() из caller — формируем локализованные «Сегодня/Yesterday»
+function formatOrderDate(iso: string, tr: (k: 'date_today' | 'date_yesterday') => string, lang: string): string {
   const d = new Date(iso);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86_400_000);
   const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (d >= today) return `Today, ${time}`;
-  if (d >= yesterday) return `Yesterday, ${time}`;
-  const month = d.toLocaleString('en', { month: 'short' });
+  if (d >= today) return `${tr('date_today')}, ${time}`;
+  if (d >= yesterday) return `${tr('date_yesterday')}, ${time}`;
+  const month = d.toLocaleString(lang, { month: 'short' });
   return `${month} ${d.getDate()}, ${time}`;
 }
 
-function formatRelativeFromCreated(iso: string, createdIso: string): string {
+function formatRelativeFromCreated(
+  iso: string,
+  createdIso: string,
+  tr: (k: 'date_today' | 'date_yesterday') => string,
+  lang: string,
+): string {
   const ts = Date.parse(iso);
   const baseTs = Date.parse(createdIso);
   if (Number.isNaN(ts) || Number.isNaN(baseTs)) return '—';
-  const dayPrefix = sameDayPrefix(iso);
+  const dayPrefix = sameDayPrefix(iso, tr, lang);
   const diffSec = Math.floor((ts - baseTs) / 1000);
   if (diffSec < 60) return `${dayPrefix}, +${diffSec}s`;
   const diffMin = Math.floor(diffSec / 60);
@@ -678,14 +698,18 @@ function formatRelativeFromCreated(iso: string, createdIso: string): string {
   return `${dayPrefix}, +${diffDay}d`;
 }
 
-function sameDayPrefix(iso: string): string {
+function sameDayPrefix(
+  iso: string,
+  tr: (k: 'date_today' | 'date_yesterday') => string,
+  lang: string,
+): string {
   const d = new Date(iso);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86_400_000);
-  if (d >= today) return 'Today';
-  if (d >= yesterday) return 'Yesterday';
-  return d.toLocaleString('en', { month: 'short' }) + ' ' + d.getDate();
+  if (d >= today) return tr('date_today');
+  if (d >= yesterday) return tr('date_yesterday');
+  return d.toLocaleString(lang, { month: 'short' }) + ' ' + d.getDate();
 }
 
 function pad(n: number): string {

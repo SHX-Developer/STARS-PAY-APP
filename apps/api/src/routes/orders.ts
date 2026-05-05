@@ -80,6 +80,7 @@ export async function ordersRoutes(app: FastifyInstance) {
 
 function serializeOrder(o: {
   id: string;
+  number: number;
   kind: string;
   recipientUsername: string;
   amount: number;
@@ -92,8 +93,8 @@ function serializeOrder(o: {
 }) {
   return {
     id: o.id,
-    // короткий читаемый "номер" заказа: последние 4 знака cuid в верхнем регистре.
-    number: `O${o.id.slice(-4).toUpperCase()}`,
+    // Целочисленный номер заказа из БД (#120, #121, ...).
+    number: o.number,
     kind: o.kind,
     recipientUsername: o.recipientUsername,
     amount: o.amount,

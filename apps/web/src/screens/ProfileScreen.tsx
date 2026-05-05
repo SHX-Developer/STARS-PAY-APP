@@ -32,18 +32,16 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
   const [transactions, setTransactions] = useState<TransactionItem[] | null>(null);
   const [txLoading, setTxLoading] = useState(false);
   const [balance, setBalance] = useState(user.starBalance);
-  const [referralsCount, setReferralsCount] = useState(0);
 
   // синхронизируем баланс с пропсом, если родитель его обновил
   useEffect(() => setBalance(user.starBalance), [user.starBalance]);
 
-  // первичная подгрузка истории + статистики (referrals count)
-  const loadAll = useCallback(async () => {
+  // первичная подгрузка истории
+  const loadTx = useCallback(async () => {
     setTxLoading(true);
     try {
-      const [txRes, meRes] = await Promise.all([api.transactions(), api.me()]);
-      setTransactions(txRes.items);
-      setReferralsCount(meRes.stats.referrals);
+      const res = await api.transactions();
+      setTransactions(res.items);
     } catch {
       /* noop */
     } finally {
@@ -52,8 +50,8 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
   }, []);
 
   useEffect(() => {
-    void loadAll();
-  }, [loadAll]);
+    void loadTx();
+  }, [loadTx]);
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
   const initials = fullName
@@ -66,27 +64,6 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
     month: 'short',
     year: 'numeric',
   });
-
-  const handleCopyCode = async () => {
-    hapticTap();
-    try {
-      await navigator.clipboard.writeText(user.referralCode);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = user.referralCode;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-      } catch {
-        /* noop */
-      }
-      document.body.removeChild(ta);
-    }
-    onToast(t('common_code_copied'));
-  };
 
   const handleWithdrawSuccess = (newBalance: number, txn: TransactionItem) => {
     setBalance(newBalance);
@@ -225,80 +202,6 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
               <Icon name="send" size={16} color="#3A2A0A" />
               {t('profile_withdraw')}
             </button>
-          </div>
-        </div>
-      </Glass>
-
-      {/* Ref code (clickable) + Invited */}
-      <Glass radius={18} padding={16}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <button
-            onClick={() => void handleCopyCode()}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              textAlign: 'left',
-              fontFamily: 'inherit',
-              color: 'inherit',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                color: TOKENS.textMute,
-                fontWeight: 600,
-                letterSpacing: 0.6,
-                textTransform: 'uppercase',
-              }}
-            >
-              {t('profile_ref_code')}
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                marginTop: 4,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: TOKENS.violet,
-                  letterSpacing: 0.4,
-                  fontFamily:
-                    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                  textDecoration: 'underline',
-                  textDecorationColor: 'rgba(155,123,255,0.4)',
-                  textUnderlineOffset: 4,
-                }}
-              >
-                {user.referralCode}
-              </span>
-              <Icon name="copy" size={14} color={TOKENS.textDim} strokeWidth={2} />
-            </div>
-          </button>
-
-          <div style={{ textAlign: 'right' }}>
-            <div
-              style={{
-                fontSize: 11,
-                color: TOKENS.textMute,
-                fontWeight: 600,
-                letterSpacing: 0.6,
-                textTransform: 'uppercase',
-              }}
-            >
-              {t('profile_invited')}
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginTop: 2 }}>
-              {referralsCount}
-            </div>
           </div>
         </div>
       </Glass>

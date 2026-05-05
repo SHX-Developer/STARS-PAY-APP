@@ -18,7 +18,6 @@ import { formatUzs } from '../lib/currency';
 // =====================================================
 
 const CARD = '4276 1900 8842 7531';
-const HOLDER = 'StarsPay Payments';
 
 interface OrderDraft {
   kind: 'stars' | 'premium';
@@ -58,8 +57,9 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
   }
 
   const isStars = order.kind === 'stars';
-  const orderTitle = isStars ? `${order.amount} ${tr('home_tab_stars').toLowerCase()}` : `Premium · ${order.amount}m`;
-  const orderSub = `${tr('payment_for')} ${order.username}`;
+  const orderTitle = isStars
+    ? `${order.amount} ${tr('common_stars')}`
+    : `Premium · ${order.amount}${tr('home_months')}`;
 
   const copy = async (text: string, label: string) => {
     hapticTap();
@@ -152,7 +152,7 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 800,
                 color: TOKENS.text,
                 letterSpacing: -0.2,
@@ -162,19 +162,6 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
               }}
             >
               {orderTitle}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: TOKENS.textMute,
-                fontWeight: 500,
-                marginTop: 2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {orderSub}
             </div>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -219,12 +206,6 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
           label={tr('payment_amount')}
           value={`${formatUzs(order.priceUzs)} UZS`}
           onCopy={() => void copy(String(order.priceUzs), tr('payment_amount'))}
-        />
-        <Divider />
-        <DetailRow
-          label={tr('payment_recipient')}
-          value={HOLDER}
-          onCopy={() => void copy(HOLDER, tr('payment_recipient'))}
         />
       </Glass>
 

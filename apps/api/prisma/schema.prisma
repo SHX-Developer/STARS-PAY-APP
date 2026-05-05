@@ -59,6 +59,8 @@ model User {
 // =====================================================
 model Order {
   id                String   @id @default(cuid())
+  // Человеко-читаемый номер заказа (#120, #121, …) — autoincrement int.
+  number            Int      @unique @default(autoincrement())
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

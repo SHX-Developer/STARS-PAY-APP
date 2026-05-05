@@ -13,8 +13,6 @@ import { TasksScreen } from './screens/TasksScreen';
 import { OrdersScreen } from './screens/OrdersScreen';
 import { PaymentModal } from './components/PaymentModal';
 
-const BRAND = 'StarsPay';
-
 export default function App() {
   const t = useT();
   const { state, refresh } = useAuth();
@@ -97,7 +95,6 @@ export default function App() {
     home: (
       <HomeScreen
         user={user}
-        brand={BRAND}
         onCheckout={(o) => void handleCheckout(o)}
       />
     ),

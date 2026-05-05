@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { TOKENS } from '../lib/tokens';
+import { hapticTap } from '../lib/telegram';
 
 type Variant = 'violet' | 'gold' | 'dark';
 
@@ -35,7 +36,11 @@ export function PrimaryButton({
   const [pressed, setPressed] = useState(false);
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        if (disabled) return;
+        hapticTap();
+        onClick?.();
+      }}
       disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {

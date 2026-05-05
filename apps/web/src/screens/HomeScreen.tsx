@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { TOKENS } from '../lib/tokens';
 import { Glass } from '../components/Glass';
 import { Icon, StarIcon, GemIcon } from '../components/Icon';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useT } from '../lib/i18n-context';
+import { hapticTap } from '../lib/telegram';
 import { starsToUzs, PREMIUM_UZS, formatUzs } from '../lib/currency';
 import type { AppUser } from '../types';
 
@@ -15,10 +16,9 @@ interface HomeProps {
     amount: number;
     priceUzs: number;
   }) => void;
-  brand: string;
 }
 
-export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
+export function HomeScreen({ user, onCheckout }: HomeProps) {
   const tr = useT();
   const [tab, setTab] = useState<'stars' | 'premium'>('stars');
   const [username, setUsername] = useState(user.username ?? '');
@@ -29,8 +29,8 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
   const banners = [
     {
       id: 'stars',
-      title: 'Send stars\ninstantly',
-      sub: 'Top up any account in seconds',
+      titleKey: 'home_banner_stars_title' as const,
+      subKey: 'home_banner_stars_sub' as const,
       gradient:
         'linear-gradient(135deg, rgba(242,198,107,0.35) 0%, rgba(155,123,255,0.4) 100%)',
       icon: 'sparkle',
@@ -38,18 +38,46 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
     },
     {
       id: 'premium',
-      title: `${brand}\nPremium`,
-      sub: 'Unlock pro features for friends',
+      titleKey: 'home_banner_premium_title' as const,
+      subKey: 'home_banner_premium_sub' as const,
       gradient: 'linear-gradient(135deg, rgba(155,123,255,0.5) 0%, rgba(91,61,204,0.5) 100%)',
       icon: 'sparkle',
       iconColor: TOKENS.violet,
     },
+    {
+      id: 'bonus',
+      titleKey: 'home_banner_bonus_title' as const,
+      subKey: 'home_banner_bonus_sub' as const,
+      gradient: 'linear-gradient(135deg, rgba(123,92,230,0.45) 0%, rgba(242,198,107,0.3) 100%)',
+      icon: 'sparkle',
+      iconColor: '#FFB347',
+    },
   ];
 
+  // авто-листание
   useEffect(() => {
     const t = setInterval(() => setBannerIdx((i) => (i + 1) % banners.length), 4500);
     return () => clearInterval(t);
   }, [banners.length]);
+
+  // touch-свайп для баннера
+  const touchStartX = useRef<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+    if (Math.abs(dx) > 40) {
+      hapticTap();
+      setBannerIdx((i) => {
+        const len = banners.length;
+        // свайп влево → следующий, вправо → предыдущий
+        return (i + (dx < 0 ? 1 : -1) + len) % len;
+      });
+    }
+    touchStartX.current = null;
+  };
 
   const priceUzs = tab === 'stars' ? starsToUzs(amount) : PREMIUM_UZS[premiumMonths];
 
@@ -118,7 +146,17 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
 
       {/* banner */}
       <div>
-        <div style={{ position: 'relative', height: 152, borderRadius: 24, overflow: 'hidden' }}>
+        <div
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          style={{
+            position: 'relative',
+            height: 152,
+            borderRadius: 24,
+            overflow: 'hidden',
+            touchAction: 'pan-y',
+          }}
+        >
           {banners.map((b, i) => (
             <div
               key={b.id}
@@ -127,7 +165,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
                 inset: 0,
                 opacity: i === bannerIdx ? 1 : 0,
                 transform: `translateX(${(i - bannerIdx) * 8}%) scale(${i === bannerIdx ? 1 : 0.97})`,
-                transition: 'opacity 600ms ease, transform 600ms ease',
+                transition: 'opacity 500ms ease, transform 500ms ease',
                 background: b.gradient,
                 border: `1px solid ${TOKENS.glassBorderStrong}`,
                 borderRadius: 24,
@@ -138,6 +176,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
                 backdropFilter: 'blur(8px)',
                 boxShadow:
                   'inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 28px rgba(0,0,0,0.3)',
+                pointerEvents: i === bannerIdx ? 'auto' : 'none',
               }}
             >
               <Icon name={b.icon} size={34} color={b.iconColor} strokeWidth={1.4} />
@@ -152,7 +191,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
                     whiteSpace: 'pre-line',
                   }}
                 >
-                  {b.title}
+                  {tr(b.titleKey)}
                 </div>
                 <div
                   style={{
@@ -162,7 +201,7 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
                     fontWeight: 500,
                   }}
                 >
-                  {b.sub}
+                  {tr(b.subKey)}
                 </div>
               </div>
             </div>
@@ -172,7 +211,10 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
           {banners.map((_, i) => (
             <button
               key={i}
-              onClick={() => setBannerIdx(i)}
+              onClick={() => {
+                hapticTap();
+                setBannerIdx(i);
+              }}
               style={{
                 width: i === bannerIdx ? 22 : 6,
                 height: 6,
@@ -218,7 +260,10 @@ export function HomeScreen({ user, onCheckout, brand }: HomeProps) {
         ).map((o) => (
           <button
             key={o.id}
-            onClick={() => setTab(o.id)}
+            onClick={() => {
+              hapticTap();
+              setTab(o.id);
+            }}
             style={{
               flex: 1,
               height: 46,
@@ -429,7 +474,10 @@ function Chip({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        hapticTap();
+        onClick();
+      }}
       style={{
         height: 56,
         borderRadius: 14,

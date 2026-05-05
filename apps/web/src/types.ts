@@ -57,7 +57,7 @@ export type OrderStatus =
 
 export interface OrderItem {
   id: string;
-  number: string; // короткий читаемый — например "O7KMP"
+  number: number; // целочисленный номер #120, #121, …
   kind: string;   // 'stars' | 'premium'
   recipientUsername: string;
   amount: number;

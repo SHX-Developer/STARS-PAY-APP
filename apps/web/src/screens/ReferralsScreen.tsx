@@ -61,7 +61,7 @@ export function ReferralsScreen({ onToast }: ReferralsProps) {
         <>
           <ReferralLinkCard link={data.link} onToast={onToast} />
           <HowItWorksCard bonus={data.bonusPerReferral} />
-          <StatsRow count={data.count} thisMonth={data.countThisMonth} earned={data.earnedStars} />
+          <StatsRow count={data.count} earned={data.earnedStars} />
           <InvitedList items={data.items} count={data.count} />
         </>
       ) : null}
@@ -152,23 +152,11 @@ function Header({ bonus }: { bonus: number }) {
     <div style={{ marginTop: 4 }}>
       <div
         style={{
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: 1.6,
-          color: TOKENS.textMute,
-          textTransform: 'uppercase',
-        }}
-      >
-        REFERRALS
-      </div>
-      <div
-        style={{
           fontSize: 32,
           fontWeight: 800,
           color: TOKENS.text,
           letterSpacing: -0.8,
           lineHeight: 1.05,
-          marginTop: 4,
         }}
       >
         {tr('referrals_title')}
@@ -294,72 +282,50 @@ function ReferralLinkCard({
           {tr('referrals_your_link')}
         </div>
 
-        {/* link input + copy button */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
-          <div
+        {/* link input — full width */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            height: 50,
+            borderRadius: 13,
+            padding: '0 14px',
+            background: 'rgba(0,0,0,0.25)',
+            border: `1px solid ${TOKENS.glassBorder}`,
+            boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.2)',
+            overflow: 'hidden',
+          }}
+        >
+          <input
+            value={link}
+            readOnly
+            onFocus={(e) => e.currentTarget.select()}
             style={{
               flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              height: 50,
-              borderRadius: 13,
-              padding: '0 14px',
-              background: 'rgba(0,0,0,0.25)',
-              border: `1px solid ${TOKENS.glassBorder}`,
-              boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.2)',
-              overflow: 'hidden',
-            }}
-          >
-            <input
-              value={link}
-              readOnly
-              onFocus={(e) => e.currentTarget.select()}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                height: '100%',
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: TOKENS.text,
-                fontSize: 15,
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                fontWeight: 600,
-                letterSpacing: -0.2,
-                textOverflow: 'ellipsis',
-              }}
-            />
-          </div>
-          <button
-            onClick={() => void handleCopy()}
-            aria-label="Copy referral link"
-            style={{
-              width: 50,
-              height: 50,
-              flexShrink: 0,
-              borderRadius: 13,
+              minWidth: 0,
+              height: '100%',
+              background: 'transparent',
               border: 'none',
-              cursor: 'pointer',
-              background: copied
-                ? 'linear-gradient(135deg, rgba(75,200,150,0.9), rgba(40,120,90,0.95))'
-                : 'linear-gradient(135deg, #9B7BFF 0%, #7B5CE6 100%)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background 220ms ease, transform 160ms ease',
-              boxShadow: copied
-                ? '0 6px 18px rgba(75,200,150,0.35), inset 0 1px 0 rgba(255,255,255,0.3)'
-                : '0 6px 18px rgba(123,92,230,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
+              outline: 'none',
+              color: TOKENS.text,
+              fontSize: 15,
+              fontFamily:
+                'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+              fontWeight: 600,
+              letterSpacing: -0.2,
+              textOverflow: 'ellipsis',
             }}
-          >
-            <Icon name={copied ? 'check' : 'copy'} size={20} color="#fff" strokeWidth={2} />
-          </button>
+          />
         </div>
 
-        {/* Share — full-width */}
-        <div style={{ marginTop: 10 }}>
+        {/* Copy + Share — две одинаковых кнопки в одну строку */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+          <SubAction
+            icon={copied ? 'check' : 'copy'}
+            label={copied ? tr('common_copied') : tr('referrals_copy')}
+            onClick={() => void handleCopy()}
+            highlight={copied}
+          />
           <SubAction icon="share" label={tr('referrals_share')} onClick={handleShare} />
         </div>
       </div>
@@ -371,21 +337,26 @@ function SubAction({
   icon,
   label,
   onClick,
+  highlight = false,
 }: {
   icon: string;
   label: string;
   onClick: () => void;
+  highlight?: boolean;
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        hapticTap();
+        onClick();
+      }}
       style={{
         width: '100%',
         height: 46,
         borderRadius: 13,
-        border: `1px solid ${TOKENS.glassBorder}`,
-        background: 'rgba(0,0,0,0.22)',
-        color: TOKENS.text,
+        border: `1px solid ${highlight ? 'rgba(75,200,150,0.45)' : TOKENS.glassBorder}`,
+        background: highlight ? 'rgba(75,200,150,0.16)' : 'rgba(0,0,0,0.22)',
+        color: highlight ? '#7BD89B' : TOKENS.text,
         fontSize: 14,
         fontWeight: 600,
         cursor: 'pointer',
@@ -394,11 +365,16 @@ function SubAction({
         justifyContent: 'center',
         gap: 8,
         fontFamily: 'inherit',
-        transition: 'background 200ms ease',
+        transition: 'background 220ms ease, color 220ms ease, border-color 220ms ease',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
       }}
     >
-      <Icon name={icon} size={16} color={TOKENS.text} strokeWidth={1.8} />
+      <Icon
+        name={icon}
+        size={16}
+        color={highlight ? '#7BD89B' : TOKENS.text}
+        strokeWidth={1.8}
+      />
       {label}
     </button>
   );
@@ -409,49 +385,28 @@ function SubAction({
 // =====================================================
 function StatsRow({
   count,
-  thisMonth,
   earned,
 }: {
   count: number;
-  thisMonth: number;
   earned: number;
 }) {
   const tr = useT();
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-      {/* Total invited */}
+      {/* Total invited — только число, без +N this month */}
       <Glass radius={18} padding={16}>
         <StatLabel>{tr('referrals_total_invited')}</StatLabel>
         <div
           style={{
-            fontSize: 36,
+            fontSize: 40,
             fontWeight: 800,
             color: TOKENS.text,
             letterSpacing: -1,
             lineHeight: 1,
-            marginTop: 8,
+            marginTop: 12,
           }}
         >
           {count.toLocaleString()}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            marginTop: 10,
-            color: thisMonth > 0 ? '#7BD89B' : TOKENS.textMute,
-            fontSize: 12.5,
-            fontWeight: 600,
-          }}
-        >
-          <Icon
-            name="arrow-up"
-            size={12}
-            color={thisMonth > 0 ? '#7BD89B' : TOKENS.textMute}
-            strokeWidth={2.4}
-          />
-          <span>{tr('referrals_this_month', { n: thisMonth })}</span>
         </div>
       </Glass>
 
@@ -486,33 +441,22 @@ function StatsRow({
             style={{
               display: 'flex',
               alignItems: 'baseline',
-              gap: 6,
-              marginTop: 8,
+              gap: 8,
+              marginTop: 12,
             }}
           >
-            <StarIcon size={22} />
             <span
               style={{
-                fontSize: 32,
+                fontSize: 36,
                 fontWeight: 800,
-                color: TOKENS.gold,
-                letterSpacing: -0.8,
+                color: TOKENS.text,
+                letterSpacing: -1,
                 lineHeight: 1,
               }}
             >
               {earned.toLocaleString()}
             </span>
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: TOKENS.textMute,
-              fontWeight: 600,
-              letterSpacing: 0.4,
-              marginTop: 10,
-            }}
-          >
-            stars
+            <StarIcon size={22} />
           </div>
         </div>
       </Glass>
