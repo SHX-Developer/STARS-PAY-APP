@@ -13,6 +13,7 @@ import { referralRoutes } from './routes/referrals.js';
 import { tasksRoutes } from './routes/tasks.js';
 import { ordersRoutes } from './routes/orders.js';
 import { walletRoutes } from './routes/wallet.js';
+import { telegramWebhookRoutes } from './routes/telegram-webhook.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -96,6 +97,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await api.register(tasksRoutes); // /tasks, /tasks/:id/check
       await api.register(ordersRoutes); // /orders
       await api.register(walletRoutes); // /transactions, /withdraw
+      await api.register(telegramWebhookRoutes); // /telegram/webhook
     },
     { prefix: '/api' },
   );

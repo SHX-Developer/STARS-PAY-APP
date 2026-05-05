@@ -678,39 +678,17 @@ function formatOrderDate(iso: string, tr: (k: 'date_today' | 'date_yesterday') =
   return `${month} ${d.getDate()}, ${time}`;
 }
 
+// Для шагов после Created — показываем реальное локальное время
+// (например "Today, 14:23"), а не относительный offset. Так понятнее.
 function formatRelativeFromCreated(
   iso: string,
-  createdIso: string,
+  _createdIso: string,
   tr: (k: 'date_today' | 'date_yesterday') => string,
   lang: string,
 ): string {
-  const ts = Date.parse(iso);
-  const baseTs = Date.parse(createdIso);
-  if (Number.isNaN(ts) || Number.isNaN(baseTs)) return '—';
-  const dayPrefix = sameDayPrefix(iso, tr, lang);
-  const diffSec = Math.floor((ts - baseTs) / 1000);
-  if (diffSec < 60) return `${dayPrefix}, +${diffSec}s`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${dayPrefix}, +${diffMin}m`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${dayPrefix}, +${diffHour}h`;
-  const diffDay = Math.floor(diffHour / 24);
-  return `${dayPrefix}, +${diffDay}d`;
+  return formatOrderDate(iso, tr, lang);
 }
 
-function sameDayPrefix(
-  iso: string,
-  tr: (k: 'date_today' | 'date_yesterday') => string,
-  lang: string,
-): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 86_400_000);
-  if (d >= today) return tr('date_today');
-  if (d >= yesterday) return tr('date_yesterday');
-  return d.toLocaleString(lang, { month: 'short' }) + ' ' + d.getDate();
-}
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : String(n);

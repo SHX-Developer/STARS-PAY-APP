@@ -220,6 +220,38 @@ npm run dev:web    # → http://localhost:5173
 
 **Чтобы добавить новое задание:** допишите объект в `DEFAULT_TASKS`, перезапустите api. Старые таски с тем же `id` обновятся, лишние — деактивируются (`active=false`). Прогресс существующих юзеров не теряется.
 
+## Telegram-бот: реакция на /start
+
+Когда юзер пишет `/start` боту в Telegram, бот должен ответить приветственным сообщением + inline-кнопкой «Open StarsPay» (web_app). Это реализовано через webhook.
+
+**Что нужно настроить:**
+
+1. В env (Dokploy / `.env`) задать:
+   ```
+   TELEGRAM_WEBHOOK_SECRET=<openssl rand -hex 32>
+   TELEGRAM_WEBAPP_URL=https://app.example.com   # ваш домен Mini App
+   WELCOME_IMAGE_URL=https://app.example.com/welcome.png  # опционально
+   ```
+
+2. После деплоя один раз вызвать `setWebhook` у Telegram:
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
+        -d "url=https://app.example.com/api/telegram/webhook" \
+        -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+   ```
+   Ожидаемый ответ: `{"ok":true,"result":true,"description":"Webhook was set"}`.
+
+3. Проверить: написать боту `/start` — должно прилететь сообщение с кнопкой «⭐️ Open StarsPay», которая открывает Mini App.
+
+**Реф-ссылки тоже работают через /start:**
+
+Пользователь открывает `https://t.me/<bot>?start=<code>` → бот получает `/start <code>` → в ответ кнопка с web_app URL вида `https://app.example.com?start=<code>` → Mini App при авторизации читает `start_param` и привязывает реферера.
+
+**Снять webhook:**
+```bash
+curl "https://api.telegram.org/bot<BOT_TOKEN>/deleteWebhook"
+```
+
 ## Безопасность
 
 - `initData` валидируется через HMAC-SHA256 + `WebAppData` ключ → подделать запрос невозможно (если только не утёк токен бота).

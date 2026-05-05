@@ -23,6 +23,19 @@ const EnvSchema = z.object({
   // Если не задано — реф-ссылка падает на формат `?start=<code>`.
   TELEGRAM_MINIAPP_NAME: z.string().min(1).optional(),
 
+  // Webhook-секрет, которым Telegram подписывает каждый POST на наш endpoint.
+  // Telegram кладёт его в заголовок X-Telegram-Bot-Api-Secret-Token.
+  // Сгенерировать: `openssl rand -hex 32`.
+  TELEGRAM_WEBHOOK_SECRET: z.string().min(8).optional(),
+
+  // Публичный URL Mini App (для inline-button web_app в /start ответе).
+  // Пример: https://stars.example.com
+  TELEGRAM_WEBAPP_URL: z.string().url().optional(),
+
+  // URL приветственной картинки. Может быть как наш домен (например
+  // /static/welcome.png), так и любой публичный image-URL.
+  WELCOME_IMAGE_URL: z.string().url().optional(),
+
   // JWT — для подписи сессионного токена, выдаваемого фронту
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 chars'),
   JWT_EXPIRES_IN: z.string().default('7d'),

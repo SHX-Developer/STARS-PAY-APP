@@ -17,7 +17,11 @@ import { formatUzs } from '../lib/currency';
 // значения (или вообще убирайте этот modal в пользу платёжной формы).
 // =====================================================
 
-const CARD = '4276 1900 8842 7531';
+// Реквизиты для оплаты — две карты узбекских платёжных систем.
+const CARDS = [
+  { network: 'UZCARD', number: '8600 1404 4227 6730' },
+  { network: 'HUMO', number: '9860 1601 0451 6572' },
+] as const;
 
 interface OrderDraft {
   kind: 'stars' | 'premium';
@@ -195,13 +199,17 @@ export function PaymentModal({ open, order, onClose, onConfirm, onToast }: Payme
       {/* TRANSFER DETAILS */}
       <SectionLabel>{tr('payment_transfer_details')}</SectionLabel>
       <Glass radius={14} padding={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
-        <DetailRow
-          label={tr('payment_card_number')}
-          value={CARD}
-          mono
-          onCopy={() => void copy(CARD, tr('payment_card_number'))}
-        />
-        <Divider />
+        {CARDS.map((c) => (
+          <div key={c.network}>
+            <DetailRow
+              label={c.network}
+              value={c.number}
+              mono
+              onCopy={() => void copy(c.number.replace(/\s/g, ''), c.network)}
+            />
+            <Divider />
+          </div>
+        ))}
         <DetailRow
           label={tr('payment_amount')}
           value={`${formatUzs(order.priceUzs)} UZS`}

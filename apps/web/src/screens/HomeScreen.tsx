@@ -44,14 +44,6 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
       icon: 'sparkle',
       iconColor: TOKENS.violet,
     },
-    {
-      id: 'bonus',
-      titleKey: 'home_banner_bonus_title' as const,
-      subKey: 'home_banner_bonus_sub' as const,
-      gradient: 'linear-gradient(135deg, rgba(123,92,230,0.45) 0%, rgba(242,198,107,0.3) 100%)',
-      icon: 'sparkle',
-      iconColor: '#FFB347',
-    },
   ];
 
   // авто-листание
@@ -393,8 +385,16 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
           {tab === 'stars'
             ? starOptions.map((v) => (
                 <Chip key={v} active={amount === v} onClick={() => setAmount(v)}>
-                  <StarIcon size={14} glow={false} />
-                  <span>{v}</span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span>{v}</span>
+                    <StarIcon size={14} glow={false} />
+                  </span>
                 </Chip>
               ))
             : monthOptions.map((o) => (

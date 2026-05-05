@@ -318,32 +318,68 @@ function ReferralLinkCard({
           />
         </div>
 
-        {/* Copy + Share — две одинаковых кнопки в одну строку */}
+        {/* Copy (violet) + Share (gold) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
           <SubAction
             icon={copied ? 'check' : 'copy'}
             label={copied ? tr('common_copied') : tr('referrals_copy')}
             onClick={() => void handleCopy()}
+            tone="violet"
             highlight={copied}
           />
-          <SubAction icon="share" label={tr('referrals_share')} onClick={handleShare} />
+          <SubAction
+            icon="share"
+            label={tr('referrals_share')}
+            onClick={handleShare}
+            tone="gold"
+          />
         </div>
       </div>
     </Glass>
   );
 }
 
+type SubActionTone = 'violet' | 'gold' | 'success';
+
 function SubAction({
   icon,
   label,
   onClick,
+  tone = 'violet',
   highlight = false,
 }: {
   icon: string;
   label: string;
   onClick: () => void;
+  tone?: SubActionTone;
   highlight?: boolean;
 }) {
+  // highlight = state "copied" → перекрывает tone и красит зелёным
+  const palette =
+    highlight || tone === 'success'
+      ? {
+          background:
+            'linear-gradient(135deg, rgba(75,200,150,0.95), rgba(40,120,90,1))',
+          border: 'rgba(75,200,150,0.55)',
+          color: '#fff',
+          shadow: '0 6px 18px rgba(75,200,150,0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+        }
+      : tone === 'gold'
+        ? {
+            background: 'linear-gradient(135deg, #F2C66B 0%, #E8B252 100%)',
+            border: 'rgba(242,198,107,0.55)',
+            color: '#3A2A0A',
+            shadow:
+              '0 6px 18px rgba(242,198,107,0.4), inset 0 1px 0 rgba(255,255,255,0.4)',
+          }
+        : {
+            background: 'linear-gradient(135deg, #9B7BFF 0%, #7B5CE6 100%)',
+            border: 'rgba(155,123,255,0.55)',
+            color: '#fff',
+            shadow:
+              '0 6px 18px rgba(123,92,230,0.4), inset 0 1px 0 rgba(255,255,255,0.25)',
+          };
+
   return (
     <button
       onClick={() => {
@@ -354,11 +390,11 @@ function SubAction({
         width: '100%',
         height: 46,
         borderRadius: 13,
-        border: `1px solid ${highlight ? 'rgba(75,200,150,0.45)' : TOKENS.glassBorder}`,
-        background: highlight ? 'rgba(75,200,150,0.16)' : 'rgba(0,0,0,0.22)',
-        color: highlight ? '#7BD89B' : TOKENS.text,
+        border: `1px solid ${palette.border}`,
+        background: palette.background,
+        color: palette.color,
         fontSize: 14,
-        fontWeight: 600,
+        fontWeight: 700,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -366,13 +402,13 @@ function SubAction({
         gap: 8,
         fontFamily: 'inherit',
         transition: 'background 220ms ease, color 220ms ease, border-color 220ms ease',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+        boxShadow: palette.shadow,
       }}
     >
       <Icon
         name={icon}
         size={16}
-        color={highlight ? '#7BD89B' : TOKENS.text}
+        color={palette.color}
         strokeWidth={1.8}
       />
       {label}

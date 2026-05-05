@@ -31,6 +31,12 @@ services:
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       # Короткое имя Mini App из BotFather `/newapp` (например `app`)
       TELEGRAM_MINIAPP_NAME: ${TELEGRAM_MINIAPP_NAME:-}
+      # Webhook-секрет (`openssl rand -hex 32`). Без него /telegram/webhook отключен.
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      # Публичный URL Mini App для inline-button web_app (например https://app.example.com)
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-}
+      # URL приветственной картинки (любой публичный image-URL)
+      WELCOME_IMAGE_URL: ${WELCOME_IMAGE_URL:-}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
