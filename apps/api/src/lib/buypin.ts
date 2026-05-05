@@ -4,26 +4,19 @@ import { config } from '../config.js';
 // =====================================================
 // Buypin: POST /games/{game}/validate-player
 //
-// Используется чтобы по @username получить имя пользователя и premium-статус.
-// game-ключ задаётся через env BUYPIN_GAME_KEY (например 'telegram-premium').
+// В body передаём только {player_id: <username без @>}.
+// server_id НЕ передаём.
 //
-// Документация: https://buypin.net/api/documentation
-//
-// Запрос:
-//   POST {EXTERNAL_API_BASE_URL}/games/{game}/validate-player
-//   Authorization: Bearer {EXTERNAL_API_KEY}
-//   Content-Type: application/json
-//   Body: { "player_id": "<username без @>" }
-//
-// Ответ (поля могут варьироваться — парсер устойчив к разным схемам):
-//   { success: true, data: { nickname / name / username, is_premium / premium } }
-//   или { name, is_premium }
+// Парсер очень лояльный — пробует кучу ключей и не отбрасывает result
+// если нашлось хоть что-то полезное. Также наружу отдаёт raw-ответ для
+// фронта/дебага.
 // =====================================================
 
 export interface UserLookup {
   username: string;
   name: string | null;
   isPremium: boolean;
+  raw?: unknown;
 }
 
 interface CacheEntry {
@@ -32,10 +25,23 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 5 * 60_000; // 5 минут
+const CACHE_TTL_MS = 5 * 60_000;
 
-export async function lookupTelegramUser(rawUsername: string): Promise<UserLookup | null> {
+export interface LookupOptions {
+  // лог raw-ответа в pino (info-уровень) — нужен для отладки несовпадений
+  log?: (msg: string, data: unknown) => void;
+}
+
+export async function lookupTelegramUser(
+  rawUsername: string,
+  opts: LookupOptions = {},
+): Promise<UserLookup | null> {
   if (!config.EXTERNAL_API_BASE_URL || !config.EXTERNAL_API_KEY || !config.BUYPIN_GAME_KEY) {
+    opts.log?.('buypin: not configured', {
+      hasBase: Boolean(config.EXTERNAL_API_BASE_URL),
+      hasKey: Boolean(config.EXTERNAL_API_KEY),
+      hasGame: Boolean(config.BUYPIN_GAME_KEY),
+    });
     return null;
   }
   const username = rawUsername.replace(/^@/, '').trim();
@@ -63,35 +69,53 @@ export async function lookupTelegramUser(rawUsername: string): Promise<UserLooku
       bodyTimeout: config.TELEGRAM_API_TIMEOUT_MS,
     });
 
-    // 4xx (например 404 = не найден, 422 = invalid) → not_found
-    if (res.statusCode >= 400 && res.statusCode < 500) {
+    let json: unknown = null;
+    try {
+      json = await res.body.json();
+    } catch {
+      // некоторые apis отдают text/plain — попробуем достать сырой текст
+      try {
+        const txt = await res.body.text();
+        json = { _raw: txt };
+      } catch {
+        /* ignore */
+      }
+    }
+
+    opts.log?.(`buypin: ${res.statusCode}`, json);
+
+    if (res.statusCode >= 500) {
+      return null;
+    }
+    if (res.statusCode >= 400) {
       cache.set(cacheKey, { ts: Date.now(), value: null });
       return null;
     }
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      // 5xx — не кэшируем, чтобы повторить позже
+
+    if (!json || typeof json !== 'object') {
+      cache.set(cacheKey, { ts: Date.now(), value: null });
       return null;
     }
 
-    const json = (await res.body.json()) as Record<string, unknown>;
-    const value = normalizeResponse(username, json);
+    const value = normalizeResponse(username, json as Record<string, unknown>);
     cache.set(cacheKey, { ts: Date.now(), value });
     return value;
-  } catch {
+  } catch (err) {
+    opts.log?.('buypin: network error', { err: (err as Error).message });
     return null;
   }
 }
 
 /**
- * Извлекает {name, isPremium} из ответа Buypin.
+ * Берёт всё что может из ответа. ЛЮБОЙ 2xx-ответ считаем "found":
+ * даже если имени нет — UI просто покажет "Found" без имени.
  *
- * Поддерживает разные обёртки и наборы ключей — на случай если их API
- * вернёт что-то отличное от ожидаемого.
+ * Возвращает null только если success явно false.
  */
 function normalizeResponse(username: string, body: Record<string, unknown>): UserLookup | null {
-  // Buypin может обернуть ответ в success/data/result/player.
+  // Развернём обёртку до внутреннего объекта
   let root: Record<string, unknown> = body;
-  for (const k of ['data', 'result', 'player', 'user', 'response']) {
+  for (const k of ['data', 'result', 'player', 'user', 'response', 'payload']) {
     const v = root[k];
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       root = v as Record<string, unknown>;
@@ -99,16 +123,13 @@ function normalizeResponse(username: string, body: Record<string, unknown>): Use
     }
   }
 
-  // success-флаг — если явно false, считаем not-found
-  const successFlag = pickBool(root, ['success', 'valid', 'ok', 'is_valid']);
-  if (successFlag === false) return null;
-  // часто success лежит на корне body, а данные — в data
-  if (body !== root) {
-    const rootSuccess = pickBool(body, ['success', 'valid', 'ok', 'is_valid']);
-    if (rootSuccess === false) return null;
-  }
+  // Если success/valid явно false — это not-found
+  const explicitFalse =
+    pickBool(body, ['success', 'valid', 'ok', 'is_valid']) === false ||
+    pickBool(root, ['success', 'valid', 'ok', 'is_valid']) === false;
+  if (explicitFalse) return null;
 
-  // Имя — пробуем кучу ключей
+  // Имя из множества полей
   const direct = pickString(root, [
     'nickname',
     'player_name',
@@ -121,6 +142,8 @@ function normalizeResponse(username: string, body: Record<string, unknown>): Use
     'first_name',
     'firstName',
     'username',
+    'user_name',
+    'login',
   ]);
   const composed = [
     pickString(root, ['first_name', 'firstName']),
@@ -129,19 +152,20 @@ function normalizeResponse(username: string, body: Record<string, unknown>): Use
     .filter(Boolean)
     .join(' ')
     .trim();
-
   const name = direct ?? (composed.length > 0 ? composed : null);
 
   const isPremium =
-    pickBool(root, ['is_premium', 'isPremium', 'premium', 'has_premium', 'hasPremium']) ?? false;
+    pickBool(root, [
+      'is_premium',
+      'isPremium',
+      'premium',
+      'has_premium',
+      'hasPremium',
+      'premium_user',
+    ]) ?? false;
 
-  // Если ничего полезного не вытащили — считаем not-found
-  if (!name && !isPremium) {
-    // успех был, но без полей — например `{success:true, data:{}}` для несуществующего юзера
-    return null;
-  }
-
-  return { username, name, isPremium };
+  // Считаем "found" если что-то ОК → возвращаем хотя бы username + raw
+  return { username, name, isPremium, raw: body };
 }
 
 function pickString(o: Record<string, unknown>, keys: string[]): string | null {
