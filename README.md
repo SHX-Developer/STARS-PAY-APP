@@ -151,6 +151,8 @@ npm run dev:web    # → http://localhost:5173
 | `CORS_ORIGINS` | `https://ваш-домен.com` (или `*`, если фронт+бэк на одном домене) |
 | `TELEGRAM_BOT_USERNAME` | Юзернейм бота без `@` (например `starspay_bot`) — для реф-ссылок |
 | `TELEGRAM_MINIAPP_NAME` | Short-name из BotFather `/newapp` (необязательно) |
+| `TELEGRAM_WEBHOOK_SECRET` | Случайный секрет для Telegram webhook (`openssl rand -hex 32`) |
+| `TELEGRAM_WEBAPP_URL` | Публичный URL Mini App, например `https://app.example.com` |
 
 ## Деплой в Dokploy
 
@@ -233,13 +235,15 @@ npm run dev:web    # → http://localhost:5173
    WELCOME_IMAGE_URL=https://app.example.com/welcome.png  # опционально
    ```
 
-2. После деплоя один раз вызвать `setWebhook` у Telegram:
-   ```bash
-   curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
-        -d "url=https://app.example.com/api/telegram/webhook" \
-        -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+2. Задеплоить/перезапустить API. При старте API сам вызовет `setWebhook` у Telegram:
    ```
-   Ожидаемый ответ: `{"ok":true,"result":true,"description":"Webhook was set"}`.
+   https://app.example.com/api/telegram/webhook
+   ```
+
+   Если API живёт на другом домене, задайте полный URL явно:
+   ```
+   TELEGRAM_WEBHOOK_URL=https://api.example.com/api/telegram/webhook
+   ```
 
 3. Проверить: написать боту `/start` — должно прилететь сообщение с кнопкой «⭐️ Open StarsPay», которая открывает Mini App.
 

@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+// Делает поле опциональным И трактует пустую строку как undefined.
+// Нужно потому что docker-compose `${VAR:-}` приходит как "" — а zod.url()
+// пустую строку принимает за невалидный URL и роняет процесс.
+function emptyToUndef<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
+}
+
 // =====================================================
 // Валидация и парсинг переменных окружения
 // =====================================================
@@ -18,30 +25,31 @@ const EnvSchema = z.object({
 
   // Юзернейм бота (без @) — нужен для построения реф-ссылок вида
   // https://t.me/<bot>/<app>?startapp=<code>
-  TELEGRAM_BOT_USERNAME: z.string().min(1).optional(),
+  // Пустая строка из docker-compose ${VAR:-} нормализуется в undefined.
+  TELEGRAM_BOT_USERNAME: emptyToUndef(z.string().min(1)),
   // Короткое имя Mini App, заданное в BotFather (`/newapp`).
-  // Если не задано — реф-ссылка падает на формат `?start=<code>`.
-  TELEGRAM_MINIAPP_NAME: z.string().min(1).optional(),
+  TELEGRAM_MINIAPP_NAME: emptyToUndef(z.string().min(1)),
 
-  // Webhook-секрет, которым Telegram подписывает каждый POST на наш endpoint.
-  // Telegram кладёт его в заголовок X-Telegram-Bot-Api-Secret-Token.
+  // Webhook-секрет (X-Telegram-Bot-Api-Secret-Token).
   // Сгенерировать: `openssl rand -hex 32`.
-  TELEGRAM_WEBHOOK_SECRET: z.string().min(8).optional(),
+  TELEGRAM_WEBHOOK_SECRET: emptyToUndef(z.string().min(8)),
+  // Полный публичный webhook URL. Если не задан, собирается из TELEGRAM_WEBAPP_URL:
+  // https://<domain>/api/telegram/webhook
+  TELEGRAM_WEBHOOK_URL: emptyToUndef(z.string().url()),
 
-  // Публичный URL Mini App (для inline-button web_app в /start ответе).
-  // Пример: https://stars.example.com
-  TELEGRAM_WEBAPP_URL: z.string().url().optional(),
+  // Публичный URL Mini App (https://stars.example.com).
+  TELEGRAM_WEBAPP_URL: emptyToUndef(z.string().url()),
 
-  // URL приветственной картинки. Может быть как наш домен (например
-  // /static/welcome.png), так и любой публичный image-URL.
-  WELCOME_IMAGE_URL: z.string().url().optional(),
+  // URL приветственной картинки.
+  WELCOME_IMAGE_URL: emptyToUndef(z.string().url()),
 
   // JWT — для подписи сессионного токена, выдаваемого фронту
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 chars'),
   JWT_EXPIRES_IN: z.string().default('7d'),
 
   // CORS — список разрешённых origin через запятую (https://app.example.com,...)
-  CORS_ORIGINS: z.string().default('*'),
+  // Пустая строка из docker-compose трактуется как '*'.
+  CORS_ORIGINS: z.preprocess((v) => (v === '' || v == null ? '*' : v), z.string()),
 
   // Где хранить локально скачанные аватарки (внутри контейнера)
   AVATAR_DIR: z.string().default('/app/data/avatars'),

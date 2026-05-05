@@ -2,6 +2,7 @@ import { buildServer } from './server.js';
 import { config } from './config.js';
 import { disconnectPrisma } from './lib/prisma.js';
 import { seedDefaultTasks } from './lib/tasks.js';
+import { setupTelegramWebhook } from './lib/telegram-webhook.js';
 
 async function main() {
   const app = await buildServer();
@@ -22,6 +23,12 @@ async function main() {
   } catch (err) {
     app.log.error(err);
     process.exit(1);
+  }
+
+  try {
+    await setupTelegramWebhook(app.log);
+  } catch (err) {
+    app.log.error({ err }, 'failed to setup Telegram webhook');
   }
 
   // graceful shutdown

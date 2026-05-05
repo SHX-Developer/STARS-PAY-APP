@@ -33,6 +33,8 @@ services:
       TELEGRAM_MINIAPP_NAME: ${TELEGRAM_MINIAPP_NAME:-}
       # Webhook-секрет (`openssl rand -hex 32`). Без него /telegram/webhook отключен.
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      # Полный webhook URL. Обычно можно не задавать: соберётся из TELEGRAM_WEBAPP_URL.
+      TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
       # Публичный URL Mini App для inline-button web_app (например https://app.example.com)
       TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-}
       # URL приветственной картинки (любой публичный image-URL)
