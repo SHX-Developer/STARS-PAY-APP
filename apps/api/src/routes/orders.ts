@@ -25,11 +25,11 @@ export async function ordersRoutes(app: FastifyInstance) {
     const userId = (req.user as { sub: string }).sub;
 
     const input = await parseCreateOrderInput(req);
-    if ('error' in input) {
+    if (!input.ok) {
       reply.code(input.statusCode);
       return { error: input.error, details: input.details };
     }
-    const { kind, recipientUsername, amount, priceUsd, receipt } = input;
+    const { kind, recipientUsername, amount, priceUsd, receipt } = input.value;
 
     if (kind === 'premium' && !PREMIUM_MONTHS.includes(amount)) {
       reply.code(400);
@@ -121,21 +121,19 @@ export async function ordersRoutes(app: FastifyInstance) {
 // -----------------------------------------------------
 // Принимает либо JSON, либо multipart/form-data (с полем receipt-файлом).
 // -----------------------------------------------------
-async function parseCreateOrderInput(
-  req: FastifyRequest,
-): Promise<
-  | (CreateOrderInput & { error?: never })
-  | { error: string; statusCode: number; details?: unknown }
-> {
+type ParseResult =
+  | { ok: true; value: CreateOrderInput }
+  | { ok: false; statusCode: number; error: string; details?: unknown };
+
+async function parseCreateOrderInput(req: FastifyRequest): Promise<ParseResult> {
   const ct = req.headers['content-type'] ?? '';
 
   if (ct.includes('multipart/form-data')) {
-    // @fastify/multipart прикрепил helper
     const reqMulti = req as FastifyRequest & {
       parts?: () => AsyncIterable<MultipartPart>;
     };
     if (!reqMulti.parts) {
-      return { error: 'multipart_unsupported', statusCode: 500 };
+      return { ok: false, statusCode: 500, error: 'multipart_unsupported' };
     }
 
     let kind: 'stars' | 'premium' | null = null;
@@ -164,15 +162,15 @@ async function parseCreateOrderInput(
       } else if (part.type === 'file' && part.fieldname === 'receipt') {
         const buf = await part.toBuffer();
         if (buf.byteLength > 8 * 1024 * 1024) {
-          return { error: 'file_too_large', statusCode: 413 };
+          return { ok: false, statusCode: 413, error: 'file_too_large' };
         }
         receipt = { buffer: buf, mime: part.mimetype || 'application/octet-stream' };
       }
     }
     if (!kind || !recipientUsername || amount == null || priceUsd == null) {
-      return { error: 'invalid_body', statusCode: 400 };
+      return { ok: false, statusCode: 400, error: 'invalid_body' };
     }
-    return { kind, recipientUsername, amount, priceUsd, receipt };
+    return { ok: true, value: { kind, recipientUsername, amount, priceUsd, receipt } };
   }
 
   // JSON путь (без чека)
@@ -191,14 +189,17 @@ async function parseCreateOrderInput(
     typeof body.amount !== 'number' ||
     typeof body.priceUsd !== 'number'
   ) {
-    return { error: 'invalid_body', statusCode: 400 };
+    return { ok: false, statusCode: 400, error: 'invalid_body' };
   }
   return {
-    kind: body.kind,
-    recipientUsername: body.recipientUsername.replace(/^@/, '').trim(),
-    amount: body.amount,
-    priceUsd: body.priceUsd,
-    receipt: null,
+    ok: true,
+    value: {
+      kind: body.kind,
+      recipientUsername: body.recipientUsername.replace(/^@/, '').trim(),
+      amount: body.amount,
+      priceUsd: body.priceUsd,
+      receipt: null,
+    },
   };
 }
 
