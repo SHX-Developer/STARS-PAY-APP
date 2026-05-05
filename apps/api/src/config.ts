@@ -53,6 +53,9 @@ const EnvSchema = z.object({
   // Buypin (внешний lookup API) — имя/премиум-статус по @username.
   EXTERNAL_API_BASE_URL: emptyToUndef(z.string().url()),
   EXTERNAL_API_KEY: emptyToUndef(z.string().min(8)),
+  // Game-key из GET /games для валидации (например 'telegram-premium').
+  // Узнать список ключей: GET https://buypin.net/api/v1/games
+  BUYPIN_GAME_KEY: emptyToUndef(z.string().min(1)),
 
   // Yandex Cloud Object Storage (S3-совместимый) — для чеков и любых файлов.
   AWS_REGION: emptyToUndef(z.string()),
