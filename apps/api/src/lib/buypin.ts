@@ -101,10 +101,105 @@ export async function lookupTelegramUser(
     }
 
     const value = normalizeResponse(username, json as Record<string, unknown>);
+
+    // Если Buypin вернул юзера, но без аватарки/премиума — пробуем добрать
+    // их через Telegram Bot API.
+    if (value && (!value.avatarUrl || !value.isPremium)) {
+      try {
+        const tg = await fetchTelegramChatInfo(username, opts.log);
+        if (tg) {
+          if (!value.avatarUrl && tg.avatarUrl) value.avatarUrl = tg.avatarUrl;
+          // is_premium из getChat не приходит, оставляем то что есть от Buypin
+          if (!value.name && tg.name) value.name = tg.name;
+        }
+      } catch {
+        /* noop — fallback не критичен */
+      }
+    }
+
     cache.set(cacheKey, { ts: Date.now(), value });
     return value;
   } catch (err) {
     opts.log?.('buypin: network error', { err: (err as Error).message });
+    return null;
+  }
+}
+
+// =====================================================
+// Telegram Bot API: getChat(@username) → возвращает фото и базовую инфу
+// =====================================================
+//
+// Работает только для:
+//   - публичных @username каналов/групп/ботов
+//   - юзеров, которые когда-либо взаимодействовали с нашим ботом
+//     (Telegram считает их "known" для бота).
+//
+// `is_premium` через getChat НЕ возвращается — премиум-флаг есть только в
+// User-объекте который приходит вместе с Message. Поэтому здесь не доступен.
+// =====================================================
+
+interface TgChatInfo {
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+async function fetchTelegramChatInfo(
+  username: string,
+  log?: (msg: string, data: unknown) => void,
+): Promise<TgChatInfo | null> {
+  const token = config.TELEGRAM_BOT_TOKEN;
+  if (!token) return null;
+  try {
+    // 1. getChat
+    const chatRes = await request(`https://api.telegram.org/bot${token}/getChat`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: `@${username}` }),
+      headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
+      bodyTimeout: config.TELEGRAM_API_TIMEOUT_MS,
+    });
+    const chatJson = (await chatRes.body.json()) as {
+      ok: boolean;
+      result?: {
+        first_name?: string;
+        last_name?: string;
+        title?: string;
+        photo?: { big_file_id?: string; small_file_id?: string };
+      };
+      description?: string;
+    };
+    log?.('tg getChat', chatJson);
+    if (!chatJson.ok || !chatJson.result) return null;
+    const r = chatJson.result;
+
+    const name =
+      [r.first_name, r.last_name].filter(Boolean).join(' ').trim() ||
+      r.title?.trim() ||
+      null;
+
+    // 2. Если есть фото — берём через getFile + строим публичный file-URL
+    let avatarUrl: string | null = null;
+    const fileId = r.photo?.big_file_id ?? r.photo?.small_file_id;
+    if (fileId) {
+      const fileRes = await request(`https://api.telegram.org/bot${token}/getFile`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ file_id: fileId }),
+        headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
+        bodyTimeout: config.TELEGRAM_API_TIMEOUT_MS,
+      });
+      const fileJson = (await fileRes.body.json()) as {
+        ok: boolean;
+        result?: { file_path?: string };
+      };
+      if (fileJson.ok && fileJson.result?.file_path) {
+        avatarUrl = `https://api.telegram.org/file/bot${token}/${fileJson.result.file_path}`;
+      }
+    }
+
+    return { name, avatarUrl };
+  } catch (err) {
+    log?.('tg getChat error', { err: (err as Error).message });
     return null;
   }
 }
