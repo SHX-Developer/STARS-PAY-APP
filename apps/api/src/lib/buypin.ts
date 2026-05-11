@@ -54,18 +54,53 @@ export async function lookupTelegramUser(
     return cached.value;
   }
 
+  // Один вызов telegram-stars: ответ содержит имя, premium и аватарку.
+  // Параллельно фолбек к Telegram Bot API для аватарки (если её нет в Buypin).
+  const [primary, tg] = await Promise.all([
+    callValidatePlayer(config.BUYPIN_GAME_KEY, username, opts),
+    fetchTelegramChatInfo(username, opts.log).catch(() => null),
+  ]);
+
+  if (!primary || !primary.success) {
+    cache.set(cacheKey, { ts: Date.now(), value: null });
+    return null;
+  }
+
+  const value: UserLookup = {
+    username,
+    name: primary.name ?? tg?.name ?? null,
+    isPremium: primary.isPremium,
+    avatarUrl: primary.avatarUrl ?? tg?.avatarUrl ?? null,
+    raw: { primary: primary.raw, tg: tg ?? null },
+  };
+
+  cache.set(cacheKey, { ts: Date.now(), value });
+  return value;
+}
+
+interface ValidatePlayerResult {
+  success: boolean;
+  name: string | null;
+  isPremium: boolean;
+  avatarUrl: string | null;
+  raw: unknown;
+}
+
+async function callValidatePlayer(
+  gameKey: string,
+  username: string,
+  opts: LookupOptions,
+): Promise<ValidatePlayerResult | null> {
   try {
-    const url = `${config.EXTERNAL_API_BASE_URL.replace(/\/$/, '')}/games/${encodeURIComponent(
-      config.BUYPIN_GAME_KEY,
+    const url = `${config.EXTERNAL_API_BASE_URL!.replace(/\/$/, '')}/games/${encodeURIComponent(
+      gameKey,
     )}/validate-player`;
-    // Buypin использует X-API-Key (НЕ Authorization: Bearer — см. документацию,
-    // ответ 401 "Missing or invalid X-API-Key" если шлём другой заголовок).
     const res = await request(url, {
       method: 'POST',
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',
-        'X-API-Key': config.EXTERNAL_API_KEY,
+        'X-API-Key': config.EXTERNAL_API_KEY!,
       },
       body: JSON.stringify({ player_id: username }),
       headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
@@ -76,7 +111,6 @@ export async function lookupTelegramUser(
     try {
       json = await res.body.json();
     } catch {
-      // некоторые apis отдают text/plain — попробуем достать сырой текст
       try {
         const txt = await res.body.text();
         json = { _raw: txt };
@@ -84,45 +118,170 @@ export async function lookupTelegramUser(
         /* ignore */
       }
     }
+    opts.log?.(`buypin ${gameKey}: ${res.statusCode}`, json);
 
-    opts.log?.(`buypin: ${res.statusCode}`, json);
-
-    if (res.statusCode >= 500) {
-      return null;
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      const parsed = parseDeep(username, (json ?? {}) as Record<string, unknown>);
+      return {
+        success: true,
+        name: parsed.name,
+        isPremium: parsed.isPremium,
+        avatarUrl: parsed.avatarUrl,
+        raw: json,
+      };
     }
-    if (res.statusCode >= 400) {
-      cache.set(cacheKey, { ts: Date.now(), value: null });
-      return null;
-    }
-
-    if (!json || typeof json !== 'object') {
-      cache.set(cacheKey, { ts: Date.now(), value: null });
-      return null;
-    }
-
-    const value = normalizeResponse(username, json as Record<string, unknown>);
-
-    // Если Buypin вернул юзера, но без аватарки/премиума — пробуем добрать
-    // их через Telegram Bot API.
-    if (value && (!value.avatarUrl || !value.isPremium)) {
-      try {
-        const tg = await fetchTelegramChatInfo(username, opts.log);
-        if (tg) {
-          if (!value.avatarUrl && tg.avatarUrl) value.avatarUrl = tg.avatarUrl;
-          // is_premium из getChat не приходит, оставляем то что есть от Buypin
-          if (!value.name && tg.name) value.name = tg.name;
-        }
-      } catch {
-        /* noop — fallback не критичен */
-      }
-    }
-
-    cache.set(cacheKey, { ts: Date.now(), value });
-    return value;
+    if (res.statusCode >= 500) return null;
+    return { success: false, name: null, isPremium: false, avatarUrl: null, raw: json };
   } catch (err) {
-    opts.log?.('buypin: network error', { err: (err as Error).message });
+    opts.log?.(`buypin ${gameKey}: network error`, { err: (err as Error).message });
     return null;
   }
+}
+
+// =====================================================
+// Рекурсивный парсер — ищет ключи на ЛЮБОЙ глубине вложенности.
+// Buypin может класть premium/avatar в data.user.is_premium / data.profile.photo / ...
+// мы обходим всё дерево и берём первое попавшееся значение.
+// =====================================================
+
+const NAME_KEYS = new Set([
+  'nickname',
+  'player_name',
+  'playername',
+  'full_name',
+  'fullname',
+  'display_name',
+  'displayname',
+  'name',
+  'first_name',
+  'firstname',
+  'username',
+  'user_name',
+  'login',
+  'title',
+]);
+
+const PREMIUM_KEYS = new Set([
+  'is_premium',
+  'ispremium',
+  'premium',
+  'has_premium',
+  'haspremium',
+  'premium_user',
+  'premiumuser',
+  'tg_premium',
+  'telegram_premium',
+  'is_premium_user',
+  'premium_status',
+  'has_telegram_premium',
+]);
+
+const AVATAR_KEYS = new Set([
+  'avatar_url',
+  'avatarurl',
+  'avatar',
+  'photo_url',
+  'photourl',
+  'photo',
+  'picture',
+  'pictureurl',
+  'picture_url',
+  'profile_photo',
+  'profilephoto',
+  'image',
+  'image_url',
+  'imageurl',
+  'profile_picture',
+  'profilepicture',
+]);
+
+interface ParseResult {
+  name: string | null;
+  isPremium: boolean;
+  avatarUrl: string | null;
+}
+
+function parseDeep(_username: string, body: Record<string, unknown>): ParseResult {
+  let name: string | null = null;
+  let isPremium = false;
+  let avatarUrl: string | null = null;
+
+  const visit = (node: unknown, depth = 0): void => {
+    if (!node || typeof node !== 'object' || depth > 6) return;
+    if (Array.isArray(node)) {
+      for (const v of node) visit(v, depth + 1);
+      return;
+    }
+    for (const [rawKey, value] of Object.entries(node as Record<string, unknown>)) {
+      const key = rawKey.toLowerCase().replace(/[-\s]/g, '_');
+      // Имя — берём первое
+      if (!name && NAME_KEYS.has(key)) {
+        const s = coerceString(value);
+        if (s) name = s;
+      }
+      // Premium — true перебивает false
+      if (!isPremium && PREMIUM_KEYS.has(key)) {
+        const b = coerceBool(value);
+        if (b === true) isPremium = true;
+      }
+      // Аватар — берём первое строковое значение, выглядящее как URL
+      if (!avatarUrl && AVATAR_KEYS.has(key)) {
+        const s = coerceString(value);
+        if (s && /^https?:\/\//.test(s)) avatarUrl = s;
+        // photo иногда объект с file_id — игнорируем, обработается через Telegram fallback
+      }
+      // Углубляемся
+      if (value && typeof value === 'object') visit(value, depth + 1);
+    }
+  };
+
+  visit(body);
+
+  // Если first_name найдено, но full name нет — попробуем собрать
+  if (!name) {
+    const fn = findFirstStringKey(body, 'first_name');
+    const ln = findFirstStringKey(body, 'last_name');
+    const composed = [fn, ln].filter(Boolean).join(' ').trim();
+    if (composed) name = composed;
+  }
+
+  return { name, isPremium, avatarUrl };
+}
+
+function findFirstStringKey(node: unknown, key: string): string | null {
+  if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const v of node) {
+      const r = findFirstStringKey(v, key);
+      if (r) return r;
+    }
+    return null;
+  }
+  const obj = node as Record<string, unknown>;
+  for (const [k, v] of Object.entries(obj)) {
+    if (k.toLowerCase() === key && typeof v === 'string' && v.trim()) return v.trim();
+    if (v && typeof v === 'object') {
+      const r = findFirstStringKey(v, key);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+function coerceString(v: unknown): string | null {
+  if (typeof v === 'string' && v.trim()) return v.trim();
+  return null;
+}
+
+function coerceBool(v: unknown): boolean | null {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  if (typeof v === 'string') {
+    const s = v.toLowerCase();
+    if (s === 'true' || s === '1' || s === 'yes' || s === 'active') return true;
+    if (s === 'false' || s === '0' || s === 'no' || s === 'inactive') return false;
+  }
+  return null;
 }
 
 // =====================================================
@@ -204,106 +363,3 @@ async function fetchTelegramChatInfo(
   }
 }
 
-/**
- * Берёт всё что может из ответа. ЛЮБОЙ 2xx-ответ считаем "found":
- * даже если имени нет — UI просто покажет "Found" без имени.
- *
- * Возвращает null только если success явно false.
- */
-function normalizeResponse(username: string, body: Record<string, unknown>): UserLookup | null {
-  // Развернём обёртку до внутреннего объекта
-  let root: Record<string, unknown> = body;
-  for (const k of ['data', 'result', 'player', 'user', 'response', 'payload']) {
-    const v = root[k];
-    if (v && typeof v === 'object' && !Array.isArray(v)) {
-      root = v as Record<string, unknown>;
-      break;
-    }
-  }
-
-  // Если success/valid явно false — это not-found
-  const explicitFalse =
-    pickBool(body, ['success', 'valid', 'ok', 'is_valid']) === false ||
-    pickBool(root, ['success', 'valid', 'ok', 'is_valid']) === false;
-  if (explicitFalse) return null;
-
-  // Имя из множества полей
-  const direct = pickString(root, [
-    'nickname',
-    'player_name',
-    'playerName',
-    'full_name',
-    'fullName',
-    'display_name',
-    'displayName',
-    'name',
-    'first_name',
-    'firstName',
-    'username',
-    'user_name',
-    'login',
-    'title',
-  ]);
-  const composed = [
-    pickString(root, ['first_name', 'firstName']),
-    pickString(root, ['last_name', 'lastName']),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-  const name = direct ?? (composed.length > 0 ? composed : null);
-
-  const isPremium =
-    pickBool(root, [
-      'is_premium',
-      'isPremium',
-      'premium',
-      'has_premium',
-      'hasPremium',
-      'premium_user',
-      'premiumUser',
-      'tg_premium',
-      'telegram_premium',
-    ]) ?? false;
-
-  // URL аватарки — пробуем разные имена полей
-  const avatarUrl = pickString(root, [
-    'avatar_url',
-    'avatarUrl',
-    'avatar',
-    'photo_url',
-    'photoUrl',
-    'photo',
-    'picture',
-    'pictureUrl',
-    'profile_photo',
-    'profilePhoto',
-    'image',
-    'image_url',
-    'imageUrl',
-  ]);
-
-  return { username, name, isPremium, avatarUrl, raw: body };
-}
-
-function pickString(o: Record<string, unknown>, keys: string[]): string | null {
-  for (const k of keys) {
-    const v = o[k];
-    if (typeof v === 'string' && v.trim()) return v.trim();
-  }
-  return null;
-}
-
-function pickBool(o: Record<string, unknown>, keys: string[]): boolean | null {
-  for (const k of keys) {
-    const v = o[k];
-    if (typeof v === 'boolean') return v;
-    if (typeof v === 'string') {
-      const s = v.toLowerCase();
-      if (s === 'true' || s === '1' || s === 'yes') return true;
-      if (s === 'false' || s === '0' || s === 'no') return false;
-    }
-    if (typeof v === 'number') return v !== 0;
-  }
-  return null;
-}

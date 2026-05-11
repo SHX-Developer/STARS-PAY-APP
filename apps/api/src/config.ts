@@ -60,6 +60,12 @@ const EnvSchema = z.object({
     (v) => (v === '' || v == null ? 'telegram-stars' : v),
     z.string().min(1),
   ),
+  // Game-key для проверки Telegram Premium подписки. Buypin отвечает 200/success
+  // только если у юзера активная Premium-подписка (иначе 422 "validation failed").
+  BUYPIN_PREMIUM_GAME_KEY: z.preprocess(
+    (v) => (v === '' || v == null ? 'telegram-premium' : v),
+    z.string().min(1),
+  ),
 
   // Yandex Cloud Object Storage (S3-совместимый) — для чеков и любых файлов.
   AWS_REGION: emptyToUndef(z.string()),
