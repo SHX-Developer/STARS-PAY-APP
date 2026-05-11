@@ -25,6 +25,8 @@ export async function lookupRoutes(app: FastifyInstance) {
       username: result.username,
       name: result.name,
       isPremium: result.isPremium,
+      avatarUrl: result.avatarUrl,
+      raw: result.raw,
     };
   });
 

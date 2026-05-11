@@ -119,6 +119,8 @@ export const api = {
       username?: string;
       name?: string | null;
       isPremium?: boolean;
+      avatarUrl?: string | null;
+      raw?: unknown;
     }>(`/api/lookup?username=${encodeURIComponent(username)}`);
   },
   orders() {

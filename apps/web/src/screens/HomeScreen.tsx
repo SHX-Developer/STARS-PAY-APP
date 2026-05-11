@@ -13,6 +13,7 @@ interface LookupState {
   status: 'idle' | 'loading' | 'found' | 'not_found' | 'error';
   name?: string | null;
   isPremium?: boolean;
+  avatarUrl?: string | null;
 }
 
 interface HomeProps {
@@ -46,7 +47,12 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
       try {
         const res = await api.lookupUsername(u);
         if (res.found) {
-          setLookup({ status: 'found', name: res.name ?? null, isPremium: res.isPremium ?? false });
+          setLookup({
+            status: 'found',
+            name: res.name ?? null,
+            isPremium: res.isPremium ?? false,
+            avatarUrl: res.avatarUrl ?? null,
+          });
         } else {
           setLookup({ status: 'not_found' });
         }
@@ -543,8 +549,29 @@ function LookupHint({ state }: { state: LookupState }) {
       {state.status === 'error' && <span>Lookup unavailable</span>}
       {state.status === 'found' && (
         <>
-          <Icon name="check" size={14} color={tone.color} strokeWidth={2.4} />
-          <span style={{ color: TOKENS.text, fontWeight: 700 }}>{state.name ?? 'Found'}</span>
+          {state.avatarUrl ? (
+            <img
+              src={state.avatarUrl}
+              alt={state.name ?? 'avatar'}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 28,
+                objectFit: 'cover',
+                border: '1px solid rgba(255,255,255,0.1)',
+                flexShrink: 0,
+              }}
+              onError={(e) => {
+                // если ссылка битая — скрываем картинку и показываем галочку
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            <Icon name="check" size={14} color={tone.color} strokeWidth={2.4} />
+          )}
+          <span style={{ color: TOKENS.text, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {state.name ?? 'Found'}
+          </span>
           {state.isPremium && (
             <span
               style={{
@@ -560,6 +587,7 @@ function LookupHint({ state }: { state: LookupState }) {
                 fontWeight: 800,
                 letterSpacing: 0.4,
                 textTransform: 'uppercase',
+                flexShrink: 0,
               }}
             >
               💎 Premium

@@ -16,6 +16,7 @@ export interface UserLookup {
   username: string;
   name: string | null;
   isPremium: boolean;
+  avatarUrl: string | null;
   raw?: unknown;
 }
 
@@ -146,6 +147,7 @@ function normalizeResponse(username: string, body: Record<string, unknown>): Use
     'username',
     'user_name',
     'login',
+    'title',
   ]);
   const composed = [
     pickString(root, ['first_name', 'firstName']),
@@ -164,10 +166,29 @@ function normalizeResponse(username: string, body: Record<string, unknown>): Use
       'has_premium',
       'hasPremium',
       'premium_user',
+      'premiumUser',
+      'tg_premium',
+      'telegram_premium',
     ]) ?? false;
 
-  // Считаем "found" если что-то ОК → возвращаем хотя бы username + raw
-  return { username, name, isPremium, raw: body };
+  // URL аватарки — пробуем разные имена полей
+  const avatarUrl = pickString(root, [
+    'avatar_url',
+    'avatarUrl',
+    'avatar',
+    'photo_url',
+    'photoUrl',
+    'photo',
+    'picture',
+    'pictureUrl',
+    'profile_photo',
+    'profilePhoto',
+    'image',
+    'image_url',
+    'imageUrl',
+  ]);
+
+  return { username, name, isPremium, avatarUrl, raw: body };
 }
 
 function pickString(o: Record<string, unknown>, keys: string[]): string | null {
