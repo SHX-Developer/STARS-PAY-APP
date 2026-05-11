@@ -57,12 +57,14 @@ export async function lookupTelegramUser(
     const url = `${config.EXTERNAL_API_BASE_URL.replace(/\/$/, '')}/games/${encodeURIComponent(
       config.BUYPIN_GAME_KEY,
     )}/validate-player`;
+    // Buypin использует X-API-Key (НЕ Authorization: Bearer — см. документацию,
+    // ответ 401 "Missing or invalid X-API-Key" если шлём другой заголовок).
     const res = await request(url, {
       method: 'POST',
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',
-        authorization: `Bearer ${config.EXTERNAL_API_KEY}`,
+        'X-API-Key': config.EXTERNAL_API_KEY,
       },
       body: JSON.stringify({ player_id: username }),
       headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
