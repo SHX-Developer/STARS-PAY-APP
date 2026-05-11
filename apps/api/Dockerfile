@@ -15,7 +15,7 @@ COPY package.json package-lock.json* ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 # Корневые workspaces — npm ставит сразу всё, что нужно
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,id=starspay-api-npm,target=/root/.npm \
     npm ci --no-audit --no-fund
 
 # ---------- 2. build ----------
@@ -38,7 +38,7 @@ RUN apk add --no-cache openssl
 COPY package.json package-lock.json* ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,id=starspay-api-npm-prod,target=/root/.npm \
     npm ci --omit=dev --no-audit --no-fund
 # нужно для миграций в рантайме
 COPY apps/api/prisma ./apps/api/prisma

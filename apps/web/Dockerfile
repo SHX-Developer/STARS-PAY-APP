@@ -13,7 +13,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,id=starspay-web-npm,target=/root/.npm \
     npm ci --no-audit --no-fund
 COPY apps/web ./apps/web
 # Vite берёт VITE_* переменные на этапе сборки
