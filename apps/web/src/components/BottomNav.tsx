@@ -4,7 +4,7 @@ import { useT } from '../lib/i18n-context';
 import { hapticTap } from '../lib/telegram';
 import type { TKey } from '../lib/i18n';
 
-export type Screen = 'home' | 'referrals' | 'tasks' | 'orders' | 'profile';
+export type Screen = 'home' | 'referrals' | 'tasks' | 'orders' | 'profile' | 'admin';
 
 interface NavTab {
   id: Screen;
@@ -23,12 +23,17 @@ const TABS: NavTab[] = [
 export function BottomNav({
   active,
   onChange,
+  isAdmin,
 }: {
   active: Screen;
   onChange: (s: Screen) => void;
+  isAdmin?: boolean;
 }) {
   const tr = useT();
-  const activeIdx = TABS.findIndex((t) => t.id === active);
+  const tabs = isAdmin
+    ? [...TABS, { id: 'admin' as const, icon: 'trophy', labelKey: 'nav_admin' as const }]
+    : TABS;
+  const activeIdx = tabs.findIndex((t) => t.id === active);
 
   return (
     <div
@@ -70,8 +75,8 @@ export function BottomNav({
             top: 6,
             bottom: 6,
             // ширина в процентах от 5 равных колонок
-            width: `calc((100% - 12px) / ${TABS.length})`,
-            left: `calc(6px + ((100% - 12px) / ${TABS.length}) * ${activeIdx})`,
+            width: `calc((100% - 12px) / ${tabs.length})`,
+            left: `calc(6px + ((100% - 12px) / ${tabs.length}) * ${activeIdx})`,
             borderRadius: 20,
             background: 'rgba(155,123,255,0.16)',
             border: '1px solid rgba(155,123,255,0.28)',
@@ -94,7 +99,7 @@ export function BottomNav({
             pointerEvents: 'none',
           }}
         />
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const isActive = active === t.id;
           return (
             <button

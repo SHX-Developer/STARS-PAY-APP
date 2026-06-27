@@ -18,6 +18,7 @@ interface OrderForChannel {
   priceUsd: { toString(): string } | string | number;
   status: string;
   receiptUrl: string | null;
+  receiptUploaded?: boolean;
   user: { firstName: string; username: string | null; telegramId: bigint };
 }
 
@@ -35,37 +36,29 @@ export async function postOrderToChannel(order: OrderForChannel): Promise<number
   const text = renderOrderText(order);
   const reply_markup = orderInlineKeyboard(order.id, order.status);
 
-  try {
-    const target = order.receiptUrl ? TG_API('sendPhoto') : TG_API('sendMessage');
-    const body = order.receiptUrl
-      ? {
-          chat_id: channel,
-          photo: order.receiptUrl,
-          caption: text,
-          parse_mode: 'HTML' as const,
-          reply_markup,
-        }
-      : {
-          chat_id: channel,
-          text,
-          parse_mode: 'HTML' as const,
-          reply_markup,
-        };
-    const res = await request(target, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
-      bodyTimeout: config.TELEGRAM_API_TIMEOUT_MS,
-    });
-    const json = (await res.body.json()) as {
-      ok: boolean;
-      result?: { message_id: number };
-    };
-    return json.result?.message_id ?? null;
-  } catch {
-    return null;
+  if (order.receiptUrl) {
+    try {
+      const photoJson = await botRequest<{ message_id: number }>('sendPhoto', {
+        chat_id: channel,
+        photo: order.receiptUrl,
+        caption: text,
+        parse_mode: 'HTML' as const,
+        reply_markup,
+      });
+      return photoJson.result?.message_id ?? null;
+    } catch {
+      // Если Telegram не смог скачать публичный URL чека, всё равно отправляем заказ
+      // текстом, чтобы админский канал не терял заявку.
+    }
   }
+
+  const json = await botRequest<{ message_id: number }>('sendMessage', {
+    chat_id: channel,
+    text,
+    parse_mode: 'HTML' as const,
+    reply_markup,
+  });
+  return json.result?.message_id ?? null;
 }
 
 function renderOrderText(o: OrderForChannel): string {
@@ -77,14 +70,21 @@ function renderOrderText(o: OrderForChannel): string {
     ? `@${escapeHtml(o.user.username)}`
     : escapeHtml(o.user.firstName);
   const price = String(o.priceUsd);
+  const receiptLine = o.receiptUrl
+    ? `<b>Чек:</b> <a href="${escapeHtml(o.receiptUrl)}">открыть</a>`
+    : o.receiptUploaded
+      ? `<b>Чек:</b> загружен, публичная ссылка недоступна`
+      : `<b>Чек:</b> не приложен`;
   return [
-    `<b>#${o.number} · ${title}</b>`,
+    `<b>Новый заказ #${o.number}</b>`,
+    `<b>${title}</b>`,
     ``,
-    `<b>Recipient:</b> @${escapeHtml(o.recipientUsername)}`,
-    `<b>Buyer:</b> ${buyer} (id ${o.user.telegramId.toString()})`,
-    `<b>Amount:</b> ${o.amount}`,
-    `<b>Total:</b> ${price} UZS`,
-    `<b>Status:</b> ${statusEmoji(o.status)} ${o.status}`,
+    `<b>Получатель:</b> @${escapeHtml(o.recipientUsername)}`,
+    `<b>Покупатель:</b> ${buyer} (id ${o.user.telegramId.toString()})`,
+    `<b>Количество:</b> ${o.amount}`,
+    `<b>Сумма:</b> ${price} UZS`,
+    receiptLine,
+    `<b>Статус:</b> ${statusEmoji(o.status)} ${statusLabel(o.status)}`,
   ].join('\n');
 }
 
@@ -119,29 +119,38 @@ function statusEmoji(status: string): string {
   }
 }
 
+function statusLabel(status: string): string {
+  switch (status) {
+    case 'paid':
+      return 'оплачен';
+    case 'delivering':
+      return 'выполняется';
+    case 'delivered':
+      return 'выполнен';
+    case 'failed':
+      return 'ошибка';
+    case 'cancelled':
+      return 'отменён';
+    default:
+      return 'создан';
+  }
+}
+
 /**
- * Inline-keyboard для админов с кнопками статусов в зависимости
- * от текущего state. Завершённые состояния (delivered/cancelled) не дают
- * кнопок, потому что менять некуда.
+ * Inline-keyboard для админов. "Выполнить" идёт через внешний delivery API,
+ * "Выполнить без API" закрывает заказ вручную после реальной ручной выдачи.
  */
 function orderInlineKeyboard(orderId: string, status: string) {
   if (status === 'delivered' || status === 'cancelled') return undefined;
-  const buttons: { text: string; callback_data: string }[] = [];
-  if (status !== 'delivering') {
-    buttons.push({ text: '📦 Delivering', callback_data: `o:${orderId}:delivering` });
-  }
-  if (status !== 'delivered') {
-    buttons.push({ text: '✅ Delivered', callback_data: `o:${orderId}:delivered` });
-  }
-  if (status !== 'cancelled') {
-    buttons.push({ text: '❌ Cancel', callback_data: `o:${orderId}:cancelled` });
-  }
-  // Раскладываем по 2 в ряд
-  const rows: { text: string; callback_data: string }[][] = [];
-  for (let i = 0; i < buttons.length; i += 2) {
-    rows.push(buttons.slice(i, i + 2));
-  }
-  return { inline_keyboard: rows };
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ Выполнить', callback_data: `o:${orderId}:complete` },
+        { text: '❌ Отменить', callback_data: `o:${orderId}:cancel` },
+      ],
+      [{ text: '🛠 Выполнить без API', callback_data: `o:${orderId}:manual` }],
+    ],
+  };
 }
 
 // =====================================================
@@ -155,82 +164,144 @@ interface CallbackQuery {
   data?: string;
 }
 
-const NEXT_STATUS_FIELDS: Record<string, 'deliveringAt' | 'deliveredAt' | null> = {
-  delivering: 'deliveringAt',
-  delivered: 'deliveredAt',
-  cancelled: null,
-};
+const ORDER_ACTIONS = ['complete', 'manual', 'cancel'] as const;
+type OrderAction = (typeof ORDER_ACTIONS)[number];
 
 export async function handleOrderCallback(req: FastifyRequest, q: CallbackQuery): Promise<void> {
-  const data = q.data ?? '';
-  const m = /^o:([^:]+):(\w+)$/.exec(data);
-  if (!m) {
-    await answerCallback(q.id, 'Unknown action');
-    return;
+  try {
+    const data = q.data ?? '';
+    const m = /^o:([^:]+):(\w+)$/.exec(data);
+    if (!m) {
+      await answerCallback(q.id, 'Неизвестное действие', true);
+      return;
+    }
+    const [, orderId, actionRaw] = m;
+    const action = actionRaw as OrderAction;
+    if (!orderId || !ORDER_ACTIONS.includes(action)) {
+      await answerCallback(q.id, 'Некорректная кнопка заказа', true);
+      return;
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: {
+          select: { firstName: true, username: true, telegramId: true },
+        },
+      },
+    });
+    if (!order) {
+      await answerCallback(q.id, 'Заказ не найден', true);
+      return;
+    }
+    if (order.status === 'delivered') {
+      await answerCallback(q.id, 'Заказ уже выполнен', true);
+      return;
+    }
+    if (order.status === 'cancelled') {
+      await answerCallback(q.id, 'Заказ уже отменён', true);
+      return;
+    }
+
+    if (action === 'complete') {
+      await fulfillOrderViaApi(order);
+    }
+
+    const updated = await markOrderByAction(order, action);
+
+    if (updated.status === 'delivered') {
+      try {
+        await maybeCreditReferralBonus(order.userId);
+      } catch (err) {
+        req.log.error({ err }, 'maybeCreditReferralBonus failed');
+      }
+    }
+
+    if (q.message && order.channelMessageId) {
+      await editOrderMessage(
+        q.message.chat.id,
+        order.channelMessageId,
+        {
+          ...order,
+          ...updated,
+          user: order.user,
+          receiptUploaded: Boolean(order.receiptUrl || order.paidAt),
+        },
+        Boolean(order.receiptUrl),
+      );
+    }
+
+    await answerCallback(
+      q.id,
+      action === 'cancel'
+        ? 'Заказ отменён'
+        : action === 'manual'
+          ? 'Заказ выполнен вручную'
+          : 'Заказ выполнен через API',
+      false,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Неизвестная ошибка';
+    req.log.error({ err }, 'handleOrderCallback failed');
+    await answerCallback(q.id, message, true);
   }
-  const [, orderId, nextStatus] = m;
-  if (!orderId || !nextStatus || !(nextStatus in NEXT_STATUS_FIELDS)) {
-    await answerCallback(q.id, 'Bad payload');
-    return;
+}
+
+async function fulfillOrderViaApi(order: OrderForChannel): Promise<void> {
+  const url = config.ORDER_DELIVERY_API_URL;
+  if (!url) {
+    throw new Error('API выдачи не настроен. Используйте "Выполнить без API" после ручной выдачи.');
   }
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      user: {
-        select: { firstName: true, username: true, telegramId: true },
-      },
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (config.ORDER_DELIVERY_API_KEY) {
+    headers.authorization = `Bearer ${config.ORDER_DELIVERY_API_KEY}`;
+  }
+
+  const res = await request(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      orderId: order.id,
+      orderNumber: order.number,
+      kind: order.kind,
+      recipientUsername: order.recipientUsername,
+      amount: order.amount,
+      priceUzs: Number(order.priceUsd),
+    }),
+    headersTimeout: config.ORDER_DELIVERY_API_TIMEOUT_MS,
+    bodyTimeout: config.ORDER_DELIVERY_API_TIMEOUT_MS,
+  });
+
+  const text = await res.body.text();
+  let json: { ok?: boolean; error?: string; message?: string } | null = null;
+  try {
+    json = text ? JSON.parse(text) as { ok?: boolean; error?: string; message?: string } : null;
+  } catch {
+    json = null;
+  }
+  if (res.statusCode < 200 || res.statusCode >= 300 || json?.ok === false) {
+    throw new Error(json?.error ?? json?.message ?? `Delivery API error ${res.statusCode}`);
+  }
+}
+
+async function markOrderByAction(order: { id: string; paidAt: Date | null }, action: OrderAction) {
+  const now = new Date();
+  if (action === 'cancel') {
+    return prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'cancelled' },
+    });
+  }
+  return prisma.order.update({
+    where: { id: order.id },
+    data: {
+      status: 'delivered',
+      paidAt: order.paidAt ?? now,
+      deliveringAt: now,
+      deliveredAt: now,
     },
   });
-  if (!order) {
-    await answerCallback(q.id, 'Order not found');
-    return;
-  }
-
-  const stamp = NEXT_STATUS_FIELDS[nextStatus];
-  const now = new Date();
-  const data2: {
-    status: string;
-    deliveringAt?: Date;
-    deliveredAt?: Date;
-    paidAt?: Date;
-  } = { status: nextStatus };
-  if (stamp === 'deliveringAt') data2.deliveringAt = now;
-  if (stamp === 'deliveredAt') {
-    data2.deliveredAt = now;
-    if (!order.deliveringAt) data2.deliveringAt = now;
-  }
-  // Если ещё не было paidAt — выставим, чтобы timeline был согласован
-  if (!order.paidAt && nextStatus !== 'cancelled') {
-    data2.paidAt = order.paidAt ?? now;
-  }
-
-  const updated = await prisma.order.update({ where: { id: orderId }, data: data2 });
-
-  // Если перешли в "delivered" — это первый успешный заказ юзера → бонус рефереру
-  if (nextStatus === 'delivered') {
-    try {
-      await maybeCreditReferralBonus(order.userId);
-    } catch (err) {
-      req.log.error({ err }, 'maybeCreditReferralBonus failed');
-    }
-  }
-
-  // Редактируем пост в канале
-  if (q.message && order.channelMessageId) {
-    await editOrderMessage(
-      q.message.chat.id,
-      order.channelMessageId,
-      {
-        ...order,
-        ...updated,
-        user: order.user,
-      },
-      Boolean(order.receiptUrl),
-    );
-  }
-
-  await answerCallback(q.id, `Status: ${nextStatus}`);
 }
 
 async function editOrderMessage(
@@ -241,7 +312,7 @@ async function editOrderMessage(
 ) {
   const text = renderOrderText(order);
   const reply_markup = orderInlineKeyboard(order.id, order.status);
-  const target = hasPhoto ? TG_API('editMessageCaption') : TG_API('editMessageText');
+  const method = hasPhoto ? 'editMessageCaption' : 'editMessageText';
   const body = hasPhoto
     ? {
         chat_id: chatId,
@@ -258,28 +329,55 @@ async function editOrderMessage(
         reply_markup,
       };
   try {
-    await request(target, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
-      bodyTimeout: config.TELEGRAM_API_TIMEOUT_MS,
+    await botRequest(method, body);
+  } catch (err) {
+    if (hasPhoto) {
+      try {
+        await botRequest('editMessageText', {
+          chat_id: chatId,
+          message_id: messageId,
+          text,
+          parse_mode: 'HTML' as const,
+          reply_markup,
+        });
+        return;
+      } catch (fallbackErr) {
+        throw fallbackErr;
+      }
+    }
+    throw err;
+  }
+}
+
+async function answerCallback(id: string, text: string, showAlert = false) {
+  try {
+    await botRequest('answerCallbackQuery', {
+      callback_query_id: id,
+      text,
+      show_alert: showAlert,
     });
   } catch {
     /* noop */
   }
 }
 
-async function answerCallback(id: string, text: string) {
-  try {
-    await request(TG_API('answerCallbackQuery'), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ callback_query_id: id, text }),
-      headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
-      bodyTimeout: config.TELEGRAM_API_TIMEOUT_MS,
-    });
-  } catch {
-    /* noop */
+interface BotApiResponse<T> {
+  ok: boolean;
+  result?: T;
+  description?: string;
+}
+
+async function botRequest<T>(method: string, body: Record<string, unknown>): Promise<BotApiResponse<T>> {
+  const res = await request(TG_API(method), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    headersTimeout: config.TELEGRAM_API_TIMEOUT_MS,
+    bodyTimeout: config.TELEGRAM_API_TIMEOUT_MS,
+  });
+  const json = (await res.body.json()) as BotApiResponse<T>;
+  if (!json.ok) {
+    throw new Error(json.description ?? `Telegram ${method} failed`);
   }
+  return json;
 }

@@ -8,6 +8,8 @@ import type {
   OrdersResponse,
   TransactionsResponse,
   WithdrawResponse,
+  AdminStatsResponse,
+  WithdrawalItem,
 } from '../types';
 
 // Базовый URL — пустая строка означает same-origin (так в проде через Traefik).
@@ -134,5 +136,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ amount }),
     });
+  },
+  adminStats() {
+    return request<AdminStatsResponse>('/api/admin/stats');
+  },
+  completeWithdrawal(id: string) {
+    return request<{ ok: boolean; withdrawal: WithdrawalItem }>(
+      `/api/admin/withdrawals/${encodeURIComponent(id)}/complete`,
+      { method: 'POST' },
+    );
+  },
+  cancelWithdrawal(id: string) {
+    return request<{ ok: boolean; withdrawal: WithdrawalItem }>(
+      `/api/admin/withdrawals/${encodeURIComponent(id)}/cancel`,
+      { method: 'POST' },
+    );
   },
 };

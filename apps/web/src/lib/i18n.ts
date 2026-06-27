@@ -32,6 +32,7 @@ export const DICT = {
     nav_tasks: 'Tasks',
     nav_orders: 'Orders',
     nav_profile: 'Profile',
+    nav_admin: 'Admin',
 
     // Dates
     date_today: 'Today',
@@ -69,11 +70,12 @@ export const DICT = {
     withdraw_balance: 'Available',
     withdraw_button: 'Confirm withdrawal',
     withdraw_quick_all: 'All',
-    withdraw_success: 'Withdrawal sent',
+    withdraw_success: 'Withdrawal request sent',
     withdraw_error_min: 'Minimum withdrawal is {min} stars',
     withdraw_error_balance: 'Not enough stars on balance',
+    withdraw_error_username: 'Set a Telegram username before withdrawal',
     withdraw_helper:
-      'Stars will be sent to your own Telegram account.',
+      'We will reserve the stars and send them to your Telegram account after admin approval.',
 
     // Transactions / activity
     tx_task: 'Task reward',
@@ -92,6 +94,7 @@ export const DICT = {
     home_banner_bonus_title: '+5% stars\non every order',
     home_banner_bonus_sub: 'Limited weekly promo',
     home_recipient: 'Recipient',
+    home_my_account: 'My account',
     home_username_placeholder: '@username',
     home_amount: 'Amount',
     home_quick_amount: 'Quick amount',
@@ -147,6 +150,11 @@ export const DICT = {
     tasks_check: 'Check',
     tasks_already_completed: 'Already completed',
     tasks_not_yet: 'Not yet',
+    tasks_reason_buy_stars_first: 'Buy exactly {amount} stars first',
+    tasks_reason_buy_premium_first: 'Buy Premium for {months} months first',
+    tasks_reason_subscribe_channel: 'Subscribe to the channel first',
+    tasks_reason_channel_unavailable: 'Channel verification is unavailable. Try later.',
+    tasks_reason_verification_failed: 'Verification failed. Try again later.',
 
     // Task content (по id)
     task_channel_starspay_title: 'Subscribe to our channel',
@@ -207,6 +215,7 @@ export const DICT = {
     nav_tasks: 'Задания',
     nav_orders: 'Заказы',
     nav_profile: 'Профиль',
+    nav_admin: 'Админ',
 
     date_today: 'Сегодня',
     date_yesterday: 'Вчера',
@@ -240,10 +249,11 @@ export const DICT = {
     withdraw_balance: 'Доступно',
     withdraw_button: 'Подтвердить вывод',
     withdraw_quick_all: 'Все',
-    withdraw_success: 'Вывод отправлен',
+    withdraw_success: 'Заявка на вывод отправлена',
     withdraw_error_min: 'Минимальный вывод — {min} stars',
     withdraw_error_balance: 'Недостаточно stars на балансе',
-    withdraw_helper: 'Stars будут отправлены на ваш Telegram-аккаунт.',
+    withdraw_error_username: 'Для вывода нужен Telegram username.',
+    withdraw_helper: 'Stars резервируются и будут отправлены на ваш Telegram-аккаунт после подтверждения админом.',
 
     tx_task: 'Награда за задание',
     tx_referral: 'Реферальный бонус',
@@ -260,6 +270,7 @@ export const DICT = {
     home_banner_bonus_title: '+5% stars\nза каждый заказ',
     home_banner_bonus_sub: 'Промо ограниченное',
     home_recipient: 'Получатель',
+    home_my_account: 'Мой аккаунт',
     home_username_placeholder: '@username',
     home_amount: 'Количество',
     home_quick_amount: 'Быстрая сумма',
@@ -311,6 +322,11 @@ export const DICT = {
     tasks_check: 'Проверить',
     tasks_already_completed: 'Уже выполнено',
     tasks_not_yet: 'Ещё не готово',
+    tasks_reason_buy_stars_first: 'Сначала купите ровно {amount} stars',
+    tasks_reason_buy_premium_first: 'Сначала купите Premium на {months} мес',
+    tasks_reason_subscribe_channel: 'Сначала подпишитесь на канал',
+    tasks_reason_channel_unavailable: 'Проверка канала временно недоступна. Попробуйте позже.',
+    tasks_reason_verification_failed: 'Не удалось проверить. Попробуйте позже.',
 
     task_channel_starspay_title: 'Подпишитесь на канал',
     task_channel_starspay_sub: '@StarsPayChannel',
@@ -369,6 +385,7 @@ export const DICT = {
     nav_tasks: 'Vazifalar',
     nav_orders: 'Buyurtmalar',
     nav_profile: 'Profil',
+    nav_admin: 'Admin',
 
     date_today: 'Bugun',
     date_yesterday: 'Kecha',
@@ -402,10 +419,11 @@ export const DICT = {
     withdraw_balance: 'Mavjud',
     withdraw_button: "Yechib olishni tasdiqlash",
     withdraw_quick_all: 'Hammasi',
-    withdraw_success: "Yechib olish yuborildi",
+    withdraw_success: "Yechib olish so‘rovi yuborildi",
     withdraw_error_min: 'Minimal yechib olish — {min} stars',
     withdraw_error_balance: 'Balansda yetarli stars yo‘q',
-    withdraw_helper: 'Stars sizning Telegram akkauntingizga yuboriladi.',
+    withdraw_error_username: 'Yechib olish uchun Telegram username kerak.',
+    withdraw_helper: 'Stars zaxiralanadi va admin tasdiqlagandan keyin Telegram akkauntingizga yuboriladi.',
 
     tx_task: "Vazifa mukofoti",
     tx_referral: 'Referal bonus',
@@ -422,6 +440,7 @@ export const DICT = {
     home_banner_bonus_title: '+5% stars\nhar bir buyurtmaga',
     home_banner_bonus_sub: "Cheklangan haftalik aksiya",
     home_recipient: 'Qabul qiluvchi',
+    home_my_account: "O'z akkauntim",
     home_username_placeholder: '@foydalanuvchi',
     home_amount: 'Miqdori',
     home_quick_amount: 'Tez tanlash',
@@ -473,6 +492,11 @@ export const DICT = {
     tasks_check: 'Tekshirish',
     tasks_already_completed: 'Allaqachon bajarilgan',
     tasks_not_yet: 'Hali tayyor emas',
+    tasks_reason_buy_stars_first: 'Avval aniq {amount} stars sotib oling',
+    tasks_reason_buy_premium_first: 'Avval Premiumni {months} oyga sotib oling',
+    tasks_reason_subscribe_channel: 'Avval kanalga obuna bo‘ling',
+    tasks_reason_channel_unavailable: 'Kanalni tekshirish hozircha ishlamayapti. Keyinroq urinib ko‘ring.',
+    tasks_reason_verification_failed: 'Tekshirish amalga oshmadi. Keyinroq urinib ko‘ring.',
 
     task_channel_starspay_title: 'Kanalimizga obuna bo‘ling',
     task_channel_starspay_sub: '@StarsPayChannel',

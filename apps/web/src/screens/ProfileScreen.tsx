@@ -7,7 +7,8 @@ import { api } from '../lib/api';
 import { hapticTap, openExternal } from '../lib/telegram';
 import { useLang } from '../lib/i18n-context';
 import { LANGS, type Lang } from '../lib/i18n';
-import type { AppUser, TransactionItem } from '../types';
+import { formatUzs } from '../lib/currency';
+import type { AppUser, OrderItem, TransactionItem } from '../types';
 
 const MIN_WITHDRAWAL = 50;
 
@@ -30,7 +31,9 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [transactions, setTransactions] = useState<TransactionItem[] | null>(null);
+  const [orders, setOrders] = useState<OrderItem[] | null>(null);
   const [txLoading, setTxLoading] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [balance, setBalance] = useState(user.starBalance);
 
   // синхронизируем баланс с пропсом, если родитель его обновил
@@ -49,9 +52,22 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
     }
   }, []);
 
+  const loadOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await api.orders();
+      setOrders(res.items);
+    } catch {
+      /* noop */
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadTx();
-  }, [loadTx]);
+    void loadOrders();
+  }, [loadTx, loadOrders]);
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
   const initials = fullName
@@ -60,11 +76,6 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('');
-  const since = new Date(user.createdAt).toLocaleString(lang, {
-    month: 'short',
-    year: 'numeric',
-  });
-
   const handleWithdrawSuccess = (newBalance: number, txn: TransactionItem) => {
     setBalance(newBalance);
     onBalanceUpdate?.(newBalance);
@@ -206,8 +217,12 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
         </div>
       </Glass>
 
-      {/* Recent activity (история) */}
-      <RecentActivity transactions={transactions} loading={txLoading} />
+      {/* Recent activity */}
+      <RecentActivity
+        orders={orders}
+        transactions={transactions}
+        loading={txLoading || ordersLoading}
+      />
 
       {/* Language switcher */}
       <div>
@@ -371,18 +386,6 @@ export function ProfileScreen({ user, onBalanceUpdate, onToast }: ProfileProps) 
         </Glass>
       </div>
 
-      <div
-        style={{
-          textAlign: 'center',
-          fontSize: 11,
-          color: TOKENS.textMute,
-          fontWeight: 500,
-          marginTop: 6,
-        }}
-      >
-        v 0.1.0 · {fullName} {t('profile_member_since')} {since}
-      </div>
-
       {/* Withdraw modal */}
       <WithdrawSheet
         open={withdrawOpen}
@@ -453,6 +456,8 @@ function WithdrawSheet({
         onErrorToast(t('withdraw_error_balance'));
       } else if (res.error === 'min_amount') {
         onErrorToast(t('withdraw_error_min', { min: res.min ?? MIN_WITHDRAWAL }));
+      } else if (res.error === 'username_required') {
+        onErrorToast(t('withdraw_error_username'));
       } else {
         onErrorToast(res.error ?? 'Failed');
       }
@@ -462,6 +467,7 @@ function WithdrawSheet({
       if (code === 'insufficient_funds') onErrorToast(t('withdraw_error_balance'));
       else if (code === 'min_amount')
         onErrorToast(t('withdraw_error_min', { min: err.body?.min ?? MIN_WITHDRAWAL }));
+      else if (code === 'username_required') onErrorToast(t('withdraw_error_username'));
       else onErrorToast(err.message);
     } finally {
       setSubmitting(false);
@@ -690,22 +696,45 @@ function QuickChip({
 }
 
 // =====================================================
-// Recent activity (inline list of last 8)
+// Recent activity (last purchases + withdrawals)
 // =====================================================
+type RecentOperation =
+  | { id: string; kind: 'order'; order: OrderItem; createdAt: string }
+  | { id: string; kind: 'withdrawal'; transaction: TransactionItem; createdAt: string };
+
 function RecentActivity({
+  orders,
   transactions,
   loading,
 }: {
+  orders: OrderItem[] | null;
   transactions: TransactionItem[] | null;
   loading: boolean;
 }) {
   const { t } = useLang();
-  const items = (transactions ?? []).slice(0, 8);
+  const items: RecentOperation[] = [
+    ...(orders ?? []).map((order) => ({
+      id: `order-${order.id}`,
+      kind: 'order' as const,
+      order,
+      createdAt: order.createdAt,
+    })),
+    ...(transactions ?? [])
+      .filter((tx) => tx.type === 'withdrawal')
+      .map((transaction) => ({
+        id: `withdrawal-${transaction.id}`,
+        kind: 'withdrawal' as const,
+        transaction,
+        createdAt: transaction.createdAt,
+      })),
+  ]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 8);
 
   return (
     <div>
       <SectionLabel>{t('profile_recent_activity')}</SectionLabel>
-      {loading && !transactions ? (
+      {loading && !orders && !transactions ? (
         <Glass radius={14} padding="12px 14px">
           <div style={{ height: 48, animation: 'pulse 1.6s ease infinite' }} />
         </Glass>
@@ -724,9 +753,9 @@ function RecentActivity({
         </Glass>
       ) : (
         <Glass radius={14} padding={0} style={{ overflow: 'hidden' }}>
-          {items.map((tx, i) => (
-            <div key={tx.id}>
-              <TransactionRow item={tx} />
+          {items.map((item, i) => (
+            <div key={item.id}>
+              <RecentOperationRow item={item} />
               {i < items.length - 1 && (
                 <div
                   style={{
@@ -740,6 +769,101 @@ function RecentActivity({
           ))}
         </Glass>
       )}
+    </div>
+  );
+}
+
+function RecentOperationRow({ item }: { item: RecentOperation }) {
+  const { t, lang } = useLang();
+
+  if (item.kind === 'withdrawal') {
+    return <TransactionRow item={item.transaction} compact />;
+  }
+
+  const order = item.order;
+  const isStars = order.kind === 'stars';
+  const date = new Date(order.createdAt);
+  const dateStr = date.toLocaleString(lang, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const title = isStars
+    ? `${order.amount} ${t('common_stars')}`
+    : `Telegram Premium ${order.amount} ${t('orders_months')}`;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 14px',
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          background: isStars
+            ? 'rgba(242,198,107,0.16)'
+            : 'rgba(155,123,255,0.16)',
+          border: isStars
+            ? '1px solid rgba(242,198,107,0.34)'
+            : '1px solid rgba(155,123,255,0.34)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {isStars ? (
+          <StarIcon size={18} />
+        ) : (
+          <Icon name="sparkle" size={18} color={TOKENS.violet} strokeWidth={1.8} />
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: TOKENS.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            fontSize: 11.5,
+            color: TOKENS.textMute,
+            fontWeight: 500,
+            marginTop: 2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          @{order.recipientUsername} · {dateStr}
+        </div>
+      </div>
+      <div
+        style={{
+          flexShrink: 0,
+          fontSize: 14,
+          fontWeight: 800,
+          color: TOKENS.text,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {formatUzs(Number(order.priceUsd))}
+        <span style={{ fontSize: 10, color: TOKENS.textDim, fontWeight: 700 }}> UZS</span>
+      </div>
     </div>
   );
 }
@@ -786,7 +910,7 @@ function TransactionsList({
   );
 }
 
-function TransactionRow({ item }: { item: TransactionItem }) {
+function TransactionRow({ item, compact = false }: { item: TransactionItem; compact?: boolean }) {
   const { t, lang } = useLang();
   const isCredit = item.amount > 0;
   const date = new Date(item.createdAt);
@@ -801,6 +925,7 @@ function TransactionRow({ item }: { item: TransactionItem }) {
       case 'task':
         return t('tx_task');
       case 'referral':
+      case 'referral_signup':
         return t('tx_referral');
       case 'withdrawal':
         return t('tx_withdrawal');
@@ -808,7 +933,9 @@ function TransactionRow({ item }: { item: TransactionItem }) {
         return t('tx_admin');
     }
   })();
-  const note = item.note && item.note !== typeLabel ? item.note : null;
+  const note = item.note && item.note !== typeLabel && item.note !== 'Withdrawal' ? item.note : null;
+  const title = note ?? typeLabel;
+  const subtitle = compact ? dateStr : `${note ? `${typeLabel} · ` : ''}${dateStr}`;
 
   return (
     <div
@@ -858,7 +985,7 @@ function TransactionRow({ item }: { item: TransactionItem }) {
             whiteSpace: 'nowrap',
           }}
         >
-          {note ?? typeLabel}
+          {title}
         </div>
         <div
           style={{
@@ -871,8 +998,7 @@ function TransactionRow({ item }: { item: TransactionItem }) {
             whiteSpace: 'nowrap',
           }}
         >
-          {note ? typeLabel + ' · ' : ''}
-          {dateStr}
+          {subtitle}
         </div>
       </div>
       <div
@@ -939,4 +1065,3 @@ function balanceBtnStyle(primary: boolean) {
     transition: 'all 200ms ease',
   } as const;
 }
-

@@ -13,6 +13,7 @@ export interface AppUser {
   tier: string;
   referralCode: string;
   createdAt: string;
+  isAdmin?: boolean;
 }
 
 export interface AuthResponse {
@@ -81,7 +82,7 @@ export interface OrdersResponse {
 // =====================================================
 // Wallet (transactions + withdraw)
 // =====================================================
-export type TxType = 'task' | 'referral' | 'withdrawal' | 'admin';
+export type TxType = 'task' | 'referral' | 'referral_signup' | 'withdrawal' | 'admin';
 
 export interface TransactionItem {
   id: string;
@@ -99,8 +100,61 @@ export interface WithdrawResponse {
   ok: boolean;
   starBalance?: number;
   transaction?: TransactionItem;
+  withdrawal?: WithdrawalItem;
   error?: string;
   min?: number;
+}
+
+export interface AdminUserBrief {
+  firstName: string;
+  username: string | null;
+  telegramId: string;
+}
+
+export interface AdminOrderItem {
+  id: string;
+  number: number;
+  kind: string;
+  recipientUsername: string;
+  amount: number;
+  priceUzs: number;
+  status: string;
+  createdAt: string;
+  user: AdminUserBrief;
+}
+
+export interface WithdrawalItem {
+  id: string;
+  number: number;
+  amount: number;
+  recipientUsername: string | null;
+  recipientTelegramId: string;
+  status: string;
+  note: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  user?: AdminUserBrief;
+}
+
+export interface AdminStatsResponse {
+  stats: {
+    users: { total: number; today: number };
+    orders: { total: number; today: number; active: number; completed: number; cancelled: number };
+    revenue: { totalUzs: number; todayUzs: number };
+    products: { starsSold: number; premiumOrders: number };
+    wallet: {
+      userBalanceStars: number;
+      pendingWithdrawals: number;
+      completedWithdrawals: number;
+      pendingWithdrawalStars: number;
+      completedWithdrawalStars: number;
+    };
+    tasks: { completions: number };
+  };
+  recentOrders: AdminOrderItem[];
+  withdrawals: WithdrawalItem[];
+  delivery: { withdrawalApiConfigured: boolean; orderApiConfigured: boolean };
 }
 
 // =====================================================

@@ -29,11 +29,12 @@ interface HomeProps {
 export function HomeScreen({ user, onCheckout }: HomeProps) {
   const tr = useT();
   const [tab, setTab] = useState<'stars' | 'premium'>('stars');
-  const [username, setUsername] = useState(user.username ?? '');
+  const [username, setUsername] = useState('');
   const [amount, setAmount] = useState(100);
   const [premiumMonths, setPremiumMonths] = useState<3 | 6 | 12>(3);
   const [bannerIdx, setBannerIdx] = useState(0);
   const [lookup, setLookup] = useState<LookupState>({ status: 'idle' });
+  const ownUsername = user.username?.trim() ?? '';
 
   // debounced username lookup
   useEffect(() => {
@@ -70,18 +71,40 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
       id: 'stars',
       titleKey: 'home_banner_stars_title' as const,
       subKey: 'home_banner_stars_sub' as const,
-      gradient:
-        'linear-gradient(135deg, rgba(242,198,107,0.35) 0%, rgba(155,123,255,0.4) 100%)',
+      accent: TOKENS.gold,
+      gradient: [
+        'linear-gradient(135deg, rgba(255,225,148,0.28) 0%, rgba(242,198,107,0.14) 34%, rgba(155,123,255,0.26) 100%)',
+        'linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 42%)',
+      ].join(', '),
       icon: 'sparkle',
       iconColor: TOKENS.gold,
+      badge: 'FAST',
     },
     {
       id: 'premium',
       titleKey: 'home_banner_premium_title' as const,
       subKey: 'home_banner_premium_sub' as const,
-      gradient: 'linear-gradient(135deg, rgba(155,123,255,0.5) 0%, rgba(91,61,204,0.5) 100%)',
+      accent: '#7BD89B',
+      gradient: [
+        'linear-gradient(135deg, rgba(91,157,238,0.34) 0%, rgba(155,123,255,0.30) 48%, rgba(123,92,230,0.26) 100%)',
+        'linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 45%)',
+      ].join(', '),
       icon: 'sparkle',
       iconColor: TOKENS.violet,
+      badge: 'PREMIUM',
+    },
+    {
+      id: 'bonus',
+      titleKey: 'home_banner_bonus_title' as const,
+      subKey: 'home_banner_bonus_sub' as const,
+      accent: '#5B9DEE',
+      gradient: [
+        'linear-gradient(135deg, rgba(75,200,150,0.24) 0%, rgba(91,157,238,0.22) 46%, rgba(242,198,107,0.18) 100%)',
+        'linear-gradient(160deg, rgba(255,255,255,0.13), rgba(255,255,255,0) 44%)',
+      ].join(', '),
+      icon: 'trophy',
+      iconColor: '#7BD89B',
+      badge: 'BONUS',
     },
   ];
 
@@ -182,7 +205,7 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
           onTouchEnd={onTouchEnd}
           style={{
             position: 'relative',
-            height: 152,
+            height: 168,
             borderRadius: 24,
             overflow: 'hidden',
             touchAction: 'pan-y',
@@ -200,25 +223,113 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
                 background: b.gradient,
                 border: `1px solid ${TOKENS.glassBorderStrong}`,
                 borderRadius: 24,
-                padding: 22,
+                padding: 20,
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'stretch',
                 justifyContent: 'space-between',
                 backdropFilter: 'blur(8px)',
                 boxShadow:
-                  'inset 0 1px 0 rgba(255,255,255,0.18), 0 12px 28px rgba(0,0,0,0.3)',
+                  'inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -28px 80px rgba(0,0,0,0.18), 0 16px 36px rgba(0,0,0,0.34)',
                 pointerEvents: i === bannerIdx ? 'auto' : 'none',
               }}
             >
-              <Icon name={b.icon} size={34} color={b.iconColor} strokeWidth={1.4} />
-              <div>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background:
+                    'repeating-linear-gradient(115deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 16px)',
+                  opacity: 0.35,
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 18,
+                  right: 18,
+                  bottom: 18,
+                  width: 116,
+                  borderRadius: 22,
+                  background: 'rgba(0,0,0,0.18)',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14)',
+                  transform: 'rotate(2deg)',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 30,
+                  right: 34,
+                  width: 74,
+                  height: 74,
+                  borderRadius: 20,
+                  background: `linear-gradient(135deg, ${b.accent}44, rgba(255,255,255,0.12))`,
+                  border: `1px solid ${b.accent}66`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 14px 32px ${b.accent}22, inset 0 1px 0 rgba(255,255,255,0.28)`,
+                }}
+              >
+                <Icon name={b.icon} size={34} color={b.iconColor} strokeWidth={1.45} />
+              </div>
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 28,
+                  bottom: 28,
+                  display: 'flex',
+                  gap: 5,
+                }}
+              >
+                {[0, 1, 2].map((n) => (
+                  <span
+                    key={n}
+                    style={{
+                      width: n === 1 ? 24 : 12,
+                      height: 5,
+                      borderRadius: 8,
+                      background: n === 1 ? b.accent : 'rgba(255,255,255,0.28)',
+                    }}
+                  />
+                ))}
+              </div>
+              <div style={{ position: 'relative', zIndex: 1, maxWidth: '62%' }}>
                 <div
                   style={{
-                    fontSize: 22,
-                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    height: 26,
+                    padding: '0 10px',
+                    borderRadius: 999,
+                    background: 'rgba(0,0,0,0.22)',
+                    border: `1px solid ${b.accent}55`,
                     color: '#fff',
-                    letterSpacing: -0.4,
-                    lineHeight: 1.1,
+                    fontSize: 10,
+                    fontWeight: 900,
+                    letterSpacing: 0.8,
+                    marginBottom: 16,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 999,
+                      background: b.accent,
+                      boxShadow: `0 0 10px ${b.accent}`,
+                    }}
+                  />
+                  {b.badge}
+                </div>
+                <div
+                  style={{
+                    fontSize: 23,
+                    fontWeight: 900,
+                    color: '#fff',
+                    lineHeight: 1.08,
                     whiteSpace: 'pre-line',
                   }}
                 >
@@ -230,6 +341,7 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
                     color: 'rgba(255,255,255,0.75)',
                     marginTop: 6,
                     fontWeight: 500,
+                    lineHeight: 1.35,
                   }}
                 >
                   {tr(b.subKey)}
@@ -344,10 +456,57 @@ export function HomeScreen({ user, onCheckout }: HomeProps) {
         >
           {tr('home_recipient')}
         </div>
+        {ownUsername && (
+          <button
+            onClick={() => {
+              hapticTap();
+              setUsername(ownUsername);
+            }}
+            style={{
+              width: '100%',
+              minHeight: 42,
+              borderRadius: 13,
+              border: '1px solid rgba(155,123,255,0.34)',
+              background: 'linear-gradient(135deg, rgba(155,123,255,0.16), rgba(91,157,238,0.10))',
+              color: TOKENS.text,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              padding: '0 12px',
+              marginBottom: 10,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 13,
+              fontWeight: 800,
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <Icon name="profile" size={16} color={TOKENS.violet} strokeWidth={1.9} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {tr('home_my_account')}
+              </span>
+            </span>
+            <span
+              style={{
+                color: TOKENS.textDim,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 140,
+              }}
+            >
+              @{ownUsername}
+            </span>
+          </button>
+        )}
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder={tr('home_username_placeholder')}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           style={{
             width: '100%',
             height: 52,

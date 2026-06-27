@@ -53,6 +53,7 @@ export async function ordersRoutes(app: FastifyInstance) {
 
     // 2. Создаём заказ
     const now = new Date();
+    const hasReceipt = Boolean(receipt);
     const order = await prisma.order.create({
       data: {
         userId,
@@ -60,9 +61,10 @@ export async function ordersRoutes(app: FastifyInstance) {
         recipientUsername,
         amount,
         priceUsd,
-        // Если был receipt → сразу paid; иначе created (ждёт ручного подтверждения)
-        status: receiptUrl ? 'paid' : 'created',
-        paidAt: receiptUrl ? now : null,
+        // Если пользователь приложил чек, считаем заказ оплаченным даже если S3
+        // недоступен: админ всё равно увидит заявку в канале.
+        status: hasReceipt ? 'paid' : 'created',
+        paidAt: hasReceipt ? now : null,
         receiptUrl,
       },
       include: {
@@ -72,7 +74,7 @@ export async function ordersRoutes(app: FastifyInstance) {
 
     // 3. Если это первый paid-заказ — пригласителю +10★
     let bonus: { creditedTo?: string; amount?: number } | null = null;
-    if (receiptUrl) {
+    if (hasReceipt) {
       const r = await maybeCreditReferralBonus(userId);
       if (r.credited) bonus = { creditedTo: r.inviterId, amount: r.amount };
     }
@@ -88,6 +90,7 @@ export async function ordersRoutes(app: FastifyInstance) {
         priceUsd: order.priceUsd,
         status: order.status,
         receiptUrl: order.receiptUrl,
+        receiptUploaded: hasReceipt,
         user: order.user,
       });
       if (messageId) {

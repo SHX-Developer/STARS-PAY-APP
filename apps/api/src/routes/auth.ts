@@ -156,5 +156,9 @@ export function serializeUser(u: {
     tier: u.tier,
     referralCode: u.referralCode,
     createdAt: u.createdAt.toISOString(),
+    isAdmin: config.ADMIN_TELEGRAM_IDS.split(',')
+      .map((id) => id.trim())
+      .filter(Boolean)
+      .includes(u.telegramId.toString()),
   };
 }

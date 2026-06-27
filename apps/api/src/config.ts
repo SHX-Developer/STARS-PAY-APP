@@ -40,12 +40,26 @@ const EnvSchema = z.object({
   // Публичный URL Mini App (https://stars.example.com).
   TELEGRAM_WEBAPP_URL: emptyToUndef(z.string().url()),
 
+  // Telegram IDs админов через запятую. Только они видят /api/admin.
+  ADMIN_TELEGRAM_IDS: z.preprocess((v) => (v === '' || v == null ? '' : v), z.string()),
+
   // URL приветственной картинки.
   WELCOME_IMAGE_URL: emptyToUndef(z.string().url()),
 
   // ID канала (или группы) для пересылки заказов админам.
   // Бот должен быть админом канала. Формат: "-1001234567890".
   TELEGRAM_ORDER_CHANNEL: emptyToUndef(z.string()),
+
+  // Опциональный API фактической выдачи Stars/Premium.
+  // POST получает JSON с orderId/orderNumber/kind/recipientUsername/amount/priceUzs.
+  ORDER_DELIVERY_API_URL: emptyToUndef(z.string().url()),
+  ORDER_DELIVERY_API_KEY: emptyToUndef(z.string()),
+  ORDER_DELIVERY_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+
+  // Опциональный API для автоматического вывода внутреннего stars-баланса.
+  WITHDRAWAL_DELIVERY_API_URL: emptyToUndef(z.string().url()),
+  WITHDRAWAL_DELIVERY_API_KEY: emptyToUndef(z.string()),
+  WITHDRAWAL_DELIVERY_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
 
   // Таймаут общих внешних http-запросов (Bot API, Buypin) в мс.
   TELEGRAM_API_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),

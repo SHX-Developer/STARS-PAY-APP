@@ -44,6 +44,7 @@ model User {
   orders          Order[]
   taskCompletions TaskCompletion[]
   transactions    Transaction[]
+  withdrawals      Withdrawal[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -127,6 +128,28 @@ model Transaction {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+model Withdrawal {
+  id                String   @id @default(cuid())
+  number            Int      @unique @default(autoincrement())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount            Int
+  recipientUsername String?
+  recipientTelegramId BigInt
+  status            String   @default("pending") // pending | completed | cancelled | failed
+  note              String?
+  processedByTgId   BigInt?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status, createdAt])
 }
 
 model TaskCompletion {

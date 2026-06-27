@@ -20,16 +20,11 @@ export function OrdersScreen() {
     try {
       const res = await api.orders();
       setOrders(res.items);
-      // По умолчанию раскрываем первый (самый свежий) — как на дизайне
-      if (res.items.length > 0 && expandedId === null) {
-        setExpandedId(res.items[0]!.id);
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

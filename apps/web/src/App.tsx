@@ -11,6 +11,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { ReferralsScreen } from './screens/ReferralsScreen';
 import { TasksScreen } from './screens/TasksScreen';
 import { OrdersScreen } from './screens/OrdersScreen';
+import { AdminScreen } from './screens/AdminScreen';
 import { PaymentModal } from './components/PaymentModal';
 
 export default function App() {
@@ -103,6 +104,7 @@ export default function App() {
     referrals: <ReferralsScreen onToast={showToast} />,
     tasks: <TasksScreen onToast={showToast} />,
     orders: <OrdersScreen />,
+    admin: user.isAdmin ? <AdminScreen onToast={showToast} /> : <ProfileScreen user={user} onToast={showToast} onBalanceUpdate={() => void refresh()} />,
   };
 
   return (
@@ -135,7 +137,7 @@ export default function App() {
           {screens[screen]}
         </div>
       </div>
-      <BottomNav active={screen} onChange={setScreen} />
+      <BottomNav active={screen} onChange={setScreen} isAdmin={user.isAdmin} />
       <Toast message={toast} visible={!!toast} />
 
       <PaymentModal

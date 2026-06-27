@@ -87,11 +87,11 @@ export function TasksScreen({ onToast }: TasksProps) {
               : prev,
           );
         } else {
-          onToast(res.reason ?? res.error ?? tr('tasks_not_yet'));
+          onToast(localizeTaskHint(res.reason ?? res.error, tr));
         }
       } catch (e) {
         const err = e as Error & { body?: { reason?: string; error?: string } };
-        onToast(err.body?.reason ?? err.body?.error ?? err.message ?? tr('tasks_not_yet'));
+        onToast(localizeTaskHint(err.body?.reason ?? err.body?.error ?? err.message, tr));
       } finally {
         setBusyId(null);
       }
@@ -139,6 +139,32 @@ export function TasksScreen({ onToast }: TasksProps) {
       ) : null}
     </div>
   );
+}
+
+function localizeTaskHint(reason: string | undefined, tr: (key: TKey, vars?: Record<string, string | number>) => string) {
+  if (!reason) return tr('tasks_not_yet');
+
+  const stars = /^Buy exactly (\d+) stars first$/i.exec(reason);
+  if (stars?.[1]) {
+    return tr('tasks_reason_buy_stars_first', { amount: stars[1] });
+  }
+
+  const premium = /^Buy (\d+)-month Premium first$/i.exec(reason);
+  if (premium?.[1]) {
+    return tr('tasks_reason_buy_premium_first', { months: premium[1] });
+  }
+
+  if (reason === 'Subscribe to the channel first' || reason === 'You are not subscribed to the channel') {
+    return tr('tasks_reason_subscribe_channel');
+  }
+  if (reason === 'Channel verification unavailable. Try later.' || reason === 'channel not configured') {
+    return tr('tasks_reason_channel_unavailable');
+  }
+  if (reason.startsWith('Verification failed:')) {
+    return tr('tasks_reason_verification_failed');
+  }
+
+  return reason;
 }
 
 // =====================================================

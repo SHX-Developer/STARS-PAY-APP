@@ -1,5 +1,33 @@
 # StarsPay — Telegram Mini App
 
+## Локальный запуск
+
+```powershell
+npm install
+npm run dev
+```
+
+Эта команда запускает workspace-проекты, где есть `dev`: API и web.
+
+Можно запускать части отдельно:
+
+```powershell
+npm run dev:api
+npm run dev:web
+```
+
+Перед запуском API заполни `.env` с `DATABASE_URL`, `TELEGRAM_BOT_TOKEN`, `JWT_SECRET` и другими нужными переменными. Для базы данных и Prisma:
+
+```powershell
+npm run db:migrate
+```
+
+Docker-вариант:
+
+```powershell
+docker compose up --build
+```
+
 Telegram WebApp для продажи Stars и Premium-подписок. Готов к деплою на сервер с Dokploy.
 
 ```

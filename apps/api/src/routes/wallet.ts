@@ -22,6 +22,22 @@ interface SerializedTransaction {
   createdAt: string;
 }
 
+function serializeTransaction(t: {
+  id: string;
+  type: string;
+  amount: number;
+  note: string | null;
+  createdAt: Date;
+}): SerializedTransaction {
+  return {
+    id: t.id,
+    type: t.type,
+    amount: t.amount,
+    note: t.note,
+    createdAt: t.createdAt.toISOString(),
+  };
+}
+
 export async function walletRoutes(app: FastifyInstance) {
   // ---------- GET /transactions ----------
   app.get('/transactions', { preHandler: [app.authenticate] }, async (req) => {
@@ -38,21 +54,12 @@ export async function walletRoutes(app: FastifyInstance) {
         createdAt: true,
       },
     });
-    return {
-      items: items.map<SerializedTransaction>((t) => ({
-        id: t.id,
-        type: t.type,
-        amount: t.amount,
-        note: t.note,
-        createdAt: t.createdAt.toISOString(),
-      })),
-    };
+    return { items: items.map<SerializedTransaction>(serializeTransaction) };
   });
 
   // ---------- POST /withdraw ----------
-  // MVP: вывод только на собственный аккаунт (recipient = telegramId юзера),
-  // реальная отправка через Bot API будет добавлена позже. Сейчас просто
-  // списываем stars и пишем транзакцию.
+  // Вывод только на собственный аккаунт. Баланс резервируется атомарно,
+  // создаётся pending-заявка; админ завершает или отменяет её в панели.
   app.post('/withdraw', { preHandler: [app.authenticate] }, async (req, reply) => {
     const userId = (req.user as { sub: string }).sub;
     const parsed = WithdrawBody.safeParse(req.body);
@@ -68,7 +75,14 @@ export async function walletRoutes(app: FastifyInstance) {
 
     try {
       const result = await prisma.$transaction(async (tx) => {
-        // updateMany с условием balance>=amount → атомарно списываем
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: { id: true, sparkleBalance: true, username: true, telegramId: true },
+        });
+        if (!user) throw new Error('user_not_found');
+        if (!user.username) throw new MissingUsernameError();
+
+        // updateMany с условием balance>=amount → атомарно резервируем
         const dec = await tx.user.updateMany({
           where: { id: userId, sparkleBalance: { gte: amount } },
           data: { sparkleBalance: { decrement: amount } },
@@ -76,36 +90,48 @@ export async function walletRoutes(app: FastifyInstance) {
         if (dec.count === 0) {
           throw new InsufficientFundsError();
         }
+        const withdrawal = await tx.withdrawal.create({
+          data: {
+            userId,
+            amount,
+            recipientUsername: user.username,
+            recipientTelegramId: user.telegramId,
+            status: 'pending',
+          },
+        });
         const txn = await tx.transaction.create({
           data: {
             userId,
             type: 'withdrawal',
             amount: -amount,
-            note: 'Withdrawal',
+            note: `Withdrawal request #${withdrawal.number} to @${user.username}`,
+            refId: withdrawal.id,
           },
         });
-        const updatedUser = await tx.user.findUnique({
-          where: { id: userId },
-          select: { sparkleBalance: true },
-        });
-        return { txn, balance: updatedUser?.sparkleBalance ?? 0 };
+        return { txn, withdrawal, balance: user.sparkleBalance - amount };
       });
 
       return {
         ok: true,
         starBalance: result.balance,
-        transaction: {
-          id: result.txn.id,
-          type: result.txn.type,
-          amount: result.txn.amount,
-          note: result.txn.note,
-          createdAt: result.txn.createdAt.toISOString(),
+        transaction: serializeTransaction(result.txn),
+        withdrawal: {
+          id: result.withdrawal.id,
+          number: result.withdrawal.number,
+          status: result.withdrawal.status,
+          amount: result.withdrawal.amount,
+          recipientUsername: result.withdrawal.recipientUsername,
+          createdAt: result.withdrawal.createdAt.toISOString(),
         },
       };
     } catch (err) {
       if (err instanceof InsufficientFundsError) {
         reply.code(402);
         return { ok: false, error: 'insufficient_funds' };
+      }
+      if (err instanceof MissingUsernameError) {
+        reply.code(400);
+        return { ok: false, error: 'username_required' };
       }
       throw err;
     }
@@ -116,5 +142,12 @@ class InsufficientFundsError extends Error {
   constructor() {
     super('insufficient funds');
     this.name = 'InsufficientFundsError';
+  }
+}
+
+class MissingUsernameError extends Error {
+  constructor() {
+    super('telegram username is required for withdrawal');
+    this.name = 'MissingUsernameError';
   }
 }
